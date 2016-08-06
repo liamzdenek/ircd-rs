@@ -1,8 +1,10 @@
 use std::net::TcpStream;
-use std::io::{BufReader,BufRead,Error as IoError};
+use std::io::{BufReader,BufRead};
 
 use linefsm::LineFSM;
 use net_traits::error::*;
+use usercomponent::UserThreadFactory;
+use user_traits::{User as TUser};
 
 pub struct User {
     stream: TcpStream,
@@ -19,10 +21,17 @@ impl User {
 
     pub fn run(&mut self) -> Result<()>{
         let mut fsm = LineFSM::new();
+        let user = TUser::new(UserThreadFactory::new());
         loop {
             let line = try!(self.read_line());
-            let msg = try!(fsm.handle_line(line));
-            println!("Got msg: {:?}", msg);
+            let cmd = try!(fsm.handle_line(line));
+            match user.send_command(cmd) {
+                Err(e) => {
+                    println!("error: {:?}", e);
+                    return Err(Error::UserError);
+                }
+                _ => {}
+            }
         }
         unreachable!{}
     }

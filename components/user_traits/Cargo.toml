@@ -1,8 +1,12 @@
 [package]
-name = "user"
+name = "user_traits"
 version = "0.0.1"
 authors = []
 
 [lib]
-name = "user"
+name = "user_traits"
 path = "lib.rs"
+
+[dependencies]
+util = { path = "../util" }
+net_traits = { path = "../net_traits" }

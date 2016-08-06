@@ -4,8 +4,8 @@ use error::*;
 #[derive(Debug)]
 pub struct ParsedCommand {
     //prefix: Option<String>,
-    command: String,
-    params: Vec<String>,
-    trailing: Vec<String>,
+    pub command: String,
+    pub params: Vec<String>,
+    pub trailing: Vec<String>,
 }
 

@@ -1,10 +1,9 @@
-use std::net::{TcpListener, TcpStream};
-use std::thread;
+#[macro_use]
+extern crate util;
+extern crate net_traits;
 
-pub mod user;
-pub mod linefsm;
+pub mod user_thread;
 pub mod error;
-pub mod userfsm;
 
-use user::User;
-
+pub use user_thread::*;
+pub use error::*;

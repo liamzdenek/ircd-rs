@@ -1,4 +1,6 @@
 extern crate net_traits;
+extern crate user as usercomponent;
+extern crate user_traits;
 
 use std::net::{TcpListener, TcpStream};
 use std::thread;

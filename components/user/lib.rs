@@ -1,10 +1,9 @@
-use std::net::{TcpListener, TcpStream};
-use std::thread;
+#![feature(mpsc_select)]
+#[macro_use]
+extern crate util;
+extern crate user_traits;
 
-pub mod user;
-pub mod linefsm;
-pub mod error;
-pub mod userfsm;
 
-use user::User;
+pub mod user_thread;
 
+pub use user_thread::*;

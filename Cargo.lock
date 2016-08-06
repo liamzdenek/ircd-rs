@@ -13,13 +13,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "lazy_static"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "net"
 version = "0.0.1"
 dependencies = [
  "net_traits 0.0.1",
+ "user 0.0.1",
+ "user_traits 0.0.1",
 ]
 
 [[package]]
 name = "net_traits"
 version = "0.0.1"
 
+[[package]]
+name = "schedule_recv"
+version = "0.1.0"
+source = "git+https://github.com/PeterReid/schedule_recv#c3dce6d755cbe9aeb08bfd80e249c79c45dd0c60"
+dependencies = [
+ "lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "user"
+version = "0.0.1"
+dependencies = [
+ "user_traits 0.0.1",
+ "util 0.0.1",
+]
+
+[[package]]
+name = "user_traits"
+version = "0.0.1"
+dependencies = [
+ "net_traits 0.0.1",
+ "util 0.0.1",
+]
+
+[[package]]
+name = "util"
+version = "0.0.1"
+dependencies = [
+ "schedule_recv 0.1.0 (git+https://github.com/PeterReid/schedule_recv)",
+]
+
+[metadata]
+"checksum lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "49247ec2a285bb3dcb23cbd9c35193c025e7251bfce77c1d5da97e6362dffe7f"
+"checksum schedule_recv 0.1.0 (git+https://github.com/PeterReid/schedule_recv)" = "<none>"

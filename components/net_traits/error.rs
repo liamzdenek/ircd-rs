@@ -7,6 +7,7 @@ pub type Result<T> = result::Result<T, Error>;
 pub enum Error {
     IoError(IoError),
     MalformedString,
+    UserError,
 }
 
 impl From<IoError> for Error {

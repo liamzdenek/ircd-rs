@@ -1,5 +1,6 @@
 use std::string::String;
 use net_traits::error::*;
+use net_traits::ParsedCommand;
 
 pub struct LineFSM {
 }
@@ -31,10 +32,10 @@ impl LineFSM {
 
                     state = State::ParseCommand{line: line.into()}
                 },
-                State::ParsePrefix{line: line} => {
+                State::ParsePrefix{line} => {
                     unimplemented!{}
                 },
-                State::ParseCommand{line: line} => {
+                State::ParseCommand{line} => {
                     let mut iter = line.split_whitespace();
                     match iter.next() {
                         Some(ref word) => {command = word.to_string()},
@@ -50,7 +51,7 @@ impl LineFSM {
                         State::Complete
                     }
                 },
-                State::ParseParams{remaining: mut remaining} => {
+                State::ParseParams{mut remaining} => {
                     params = vec![];
                     trailing = vec![];
                     let mut which = true;
@@ -78,15 +79,6 @@ impl LineFSM {
             }
         }
     }
-}
-
-
-#[derive(Debug)]
-pub struct ParsedCommand {
-    //prefix: Option<String>,
-    command: String,
-    params: Vec<String>,
-    trailing: Vec<String>,
 }
 
 enum State {

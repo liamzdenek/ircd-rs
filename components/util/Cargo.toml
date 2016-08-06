@@ -1,0 +1,11 @@
+[package]
+name = "util"
+version = "0.0.1"
+authors = []
+
+[lib]
+name = "util"
+path = "lib.rs"
+
+[dependencies.schedule_recv]
+git = "https://github.com/PeterReid/schedule_recv"
