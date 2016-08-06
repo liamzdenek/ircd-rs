@@ -1,0 +1,8 @@
+[package]
+name = "net_traits"
+version = "0.0.1"
+authors = []
+
+[lib]
+name = "net_traits"
+path = "lib.rs"

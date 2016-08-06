@@ -1,0 +1,11 @@
+[package]
+name = "core"
+version = "0.0.1"
+authors = []
+
+[lib]
+name = "core"
+path = "lib.rs"
+
+[dependencies]
+net = {path = "../net"}

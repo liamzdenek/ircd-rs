@@ -1,0 +1,25 @@
+[root]
+name = "ircd"
+version = "0.1.0"
+dependencies = [
+ "core 0.0.1",
+]
+
+[[package]]
+name = "core"
+version = "0.0.1"
+dependencies = [
+ "net 0.0.1",
+]
+
+[[package]]
+name = "net"
+version = "0.0.1"
+dependencies = [
+ "net_traits 0.0.1",
+]
+
+[[package]]
+name = "net_traits"
+version = "0.0.1"
+
