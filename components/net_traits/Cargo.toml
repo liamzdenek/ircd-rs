@@ -6,3 +6,6 @@ authors = []
 [lib]
 name = "net_traits"
 path = "lib.rs"
+
+[dependencies]
+util = { path = "../util" }

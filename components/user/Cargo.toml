@@ -8,5 +8,6 @@ name = "user"
 path = "lib.rs"
 
 [dependencies]
-user_traits = {path="../user_traits"}
+user_traits = { path = "../user_traits" }
 util = { path = "../util" }
+net_traits = { path = "../net_traits" }

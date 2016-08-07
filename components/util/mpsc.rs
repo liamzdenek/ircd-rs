@@ -3,7 +3,7 @@ pub use schedule_recv::oneshot_ms;
 #[macro_export]
 macro_rules! lselect_timeout {
     ($time_ms:expr => $code:expr, $($args:tt)*) => ({
-        let timeout_rx = $crate::lselect::oneshot_ms($time_ms);
+        let timeout_rx = $crate::oneshot_ms($time_ms);
         lselect!(
             _ = timeout_rx => $code,
             $($args)*

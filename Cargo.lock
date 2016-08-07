@@ -24,11 +24,15 @@ dependencies = [
  "net_traits 0.0.1",
  "user 0.0.1",
  "user_traits 0.0.1",
+ "util 0.0.1",
 ]
 
 [[package]]
 name = "net_traits"
 version = "0.0.1"
+dependencies = [
+ "util 0.0.1",
+]
 
 [[package]]
 name = "schedule_recv"
@@ -42,6 +46,7 @@ dependencies = [
 name = "user"
 version = "0.0.1"
 dependencies = [
+ "net_traits 0.0.1",
  "user_traits 0.0.1",
  "util 0.0.1",
 ]

@@ -1,3 +1,6 @@
+#![feature(mpsc_select)]
+#[macro_use]
+extern crate util;
 extern crate net_traits;
 extern crate user as usercomponent;
 extern crate user_traits;
@@ -7,7 +10,11 @@ use std::thread;
 
 pub mod user;
 pub mod linefsm;
+pub mod writer_thread;
 
+//pub use user::*;
+pub use linefsm::*;
+pub use writer_thread::*;
 
 use user::User;
 

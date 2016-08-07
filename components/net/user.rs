@@ -2,9 +2,11 @@ use std::net::TcpStream;
 use std::io::{BufReader,BufRead};
 
 use linefsm::LineFSM;
-use net_traits::error::*;
+use net_traits::*;
 use usercomponent::UserThreadFactory;
 use user_traits::{User as TUser};
+
+use super::{WriterThreadFactory};
 
 pub struct User {
     stream: TcpStream,
@@ -21,7 +23,8 @@ impl User {
 
     pub fn run(&mut self) -> Result<()>{
         let mut fsm = LineFSM::new();
-        let user = TUser::new(UserThreadFactory::new());
+        let writer = Writer::new(WriterThreadFactory::new(self.stream.try_clone().unwrap()));
+        let user = TUser::new(UserThreadFactory::new(writer));
         loop {
             let line = try!(self.read_line());
             let cmd = try!(fsm.handle_line(line));
