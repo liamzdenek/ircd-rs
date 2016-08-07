@@ -3,8 +3,8 @@ use std::net::TcpStream;
 use std::thread;
 use std::io::Write;
 
+use net_traits::*;
 
-use net_traits::{WriterThread,WriterThreadMsg};
 
 pub trait WriterThreadFactory {
     fn new(TcpStream) -> Self;
@@ -23,6 +23,7 @@ impl WriterThreadFactory for WriterThread {
 pub struct WriterWorker {
     stream: TcpStream,
     rx: Receiver<WriterThreadMsg>,
+    data: WriterData,
 }
 
 impl WriterWorker {
@@ -30,6 +31,7 @@ impl WriterWorker {
         WriterWorker{
             stream: stream,
             rx: rx,
+            data: Default::default(),
         }
     }
     fn run(&mut self) {
@@ -53,9 +55,17 @@ impl WriterWorker {
     }
     fn handle_msg(&mut self, msg: WriterThreadMsg) -> bool {
         match msg {
-            WriterThreadMsg::Send(raw) => {
-                println!("Send raw: {:?}", raw);
+            WriterThreadMsg::SendRaw(raw) => {
+                println!(">> (raw) {}", raw);
                 self.stream.write(raw.into_bytes().as_slice());
+            },
+            WriterThreadMsg::Send(rpl) => {
+                let raw = rpl.raw(&self.data);
+                println!(">> {} -- from {:?}", raw, rpl);
+                self.stream.write(format!("{}\r\n", raw).into_bytes().as_slice());
+            },
+            WriterThreadMsg::UpdateNick(nick) => {
+                self.data.nick = nick
             }
         };
         false

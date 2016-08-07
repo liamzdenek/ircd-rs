@@ -1,6 +1,6 @@
 use std::sync::mpsc::{channel, Receiver};
 use std::thread;
-use net_traits::{Writer, ParsedCommand};
+use net_traits::{Writer, ParsedCommand, RPL};
 
 use user_traits::{UserThread, UserThreadMsg};
 
@@ -19,29 +19,44 @@ impl UserThreadFactory for UserThread {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum State {
-    NewConnection,
-    AwaitingUSER{nick: String},
+    NewConnection(Option<UserData>),
     Connected{data: UserData},
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 struct UserData {
     nick: String,
     user_name: String,
     real_name: String,
 }
 
+impl UserData {
+    fn apply(&mut self, mut cmd: ParsedCommand) {
+        if cmd.command == "NICK" {
+            self.nick = cmd.params.drain(..).next().unwrap();
+        } else if cmd.command == "USER" {
+            self.user_name = cmd.params[0].clone();
+            self.real_name = cmd.trailing.clone().join(" ");
+        }
+    }
+
+    fn is_ready(&mut self) -> bool {
+        return self.nick.len() > 0 && self.user_name.len() > 0 && self.real_name.len() > 0
+    }
+}
+
 pub struct UserWorker {
     rx: Receiver<UserThreadMsg>,
     writer: Writer,
     state: State,
+    modes: Vec<char>,
 }
 
 impl UserWorker {
     fn new(rx: Receiver<UserThreadMsg>, writer: Writer) -> Self {
-        UserWorker{ rx: rx, writer: writer, state: State::NewConnection }
+        UserWorker{ rx: rx, writer: writer, state: State::NewConnection(None), modes: vec![] }
     }
 
     fn run(&mut self) {
@@ -70,7 +85,7 @@ impl UserWorker {
     }
 
     fn handle_msg(&mut self, msg: UserThreadMsg) -> bool {
-        println!("got msg: {:?}", msg);
+        //println!("got msg: {:?}", msg);
         return match msg {
             UserThreadMsg::Command(cmd) => {
                 self.handle_command(cmd)
@@ -81,23 +96,22 @@ impl UserWorker {
         }
     }
     fn handle_command(&mut self, mut cmd: ParsedCommand) -> bool{
-        self.state = match (&self.state, cmd.command.as_ref()) {
-            (&State::NewConnection, "NICK") => {
-                println!("got NICK command");
-                State::AwaitingUSER{ nick: cmd.params.drain(..).next().unwrap() }
-            },
-            (&State::AwaitingUSER{ref nick}, "USER") => {
-                println!("got USER command");
-                let data = UserData {
-                    nick: nick.clone().to_owned(),
-                    user_name: cmd.params[0].clone(),
-                    real_name: cmd.trailing.clone().join(" "),
-                };
-
-                println!("User data: {:?}", data);
-                self.writer.write_raw("hello world".into());
-                
-                State::Connected{data: data}
+        //TODO: handle htis better so that self.state is not cloned
+        self.state = match (self.state.clone(), cmd.command.as_ref()) {
+            // TODO: add PASSWD support
+            (State::NewConnection(maybe_data), "NICK") |
+            (State::NewConnection(maybe_data), "USER") => {
+                let mut data = maybe_data.unwrap_or(Default::default());
+                data.apply(cmd);
+                if data.is_ready() {
+                    println!("== Connected");
+                    self.writer.update_nick(data.nick.clone());
+                    self.introduce(&data);
+                    self.welcome(&data);
+                    State::Connected{data: data}
+                } else {
+                    State::NewConnection(Some(data))
+                }
             },
             (_,_) => {
                 println!("I don't know how to handle CMD: {:?} at with STATE: {:?}", cmd.command, self.state);
@@ -105,5 +119,35 @@ impl UserWorker {
             }
         };
         return false;
+    }
+
+    fn introduce(&mut self, data: &UserData) {
+        //TODO: broadcast to the other servers information about this user, refer to seven src/s_user.c introduce_client
+    }
+
+    fn welcome(&mut self, data: &UserData) {
+        // upon first connect send the user this information
+        self.writer.write(RPL::Welcome{msg: "Hello, World!".into()});
+        self.writer.write(RPL::YourHost);
+        self.motd();
+        self.set_mode('i');
+    }
+
+    fn motd(&mut self) {
+        self.writer.write(RPL::MotdStart);
+        self.writer.write(RPL::Motd("Hello MOTD".into()));
+        self.writer.write(RPL::MotdEnd);
+    }
+
+    fn set_mode(&mut self, mode: char) {
+        if !self.modes.contains(&mode) {
+            self.modes.push(mode);
+        }
+        self.writer.write(RPL::Mode{mode: mode, enabled: true});
+    }
+    
+    fn remove_mode(&mut self, mode: char) {
+        self.modes.retain(|e| (*e) != mode);
+        self.writer.write(RPL::Mode{mode: mode, enabled: false});
     }
 }
