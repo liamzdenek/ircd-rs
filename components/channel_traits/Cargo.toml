@@ -1,15 +1,11 @@
 [package]
-name = "net"
+name = "channel_traits"
 version = "0.0.1"
 authors = []
 
 [lib]
-name = "net"
 path = "lib.rs"
 
 [dependencies]
-user = { path = "../user" }
 util = { path = "../util" }
-net_traits = { path = "../net_traits" }
 user_traits = { path = "../user_traits" }
-channel_traits = { path = "../channel_traits" }

@@ -1,0 +1,12 @@
+[package]
+name = "channel"
+version = "0.0.1"
+authors = []
+
+[lib]
+name = "channel"
+path = "lib.rs"
+
+[dependencies]
+channel_traits = { path = "../channel_traits" }
+util = { path = "../util" }

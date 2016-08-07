@@ -1,18 +1,19 @@
 use std::sync::mpsc::{channel, Receiver};
 use std::thread;
-use net_traits::{Writer, ParsedCommand, RPL};
 
+use net_traits::{Writer, ParsedCommand, RPL};
 use user_traits::{UserThread, UserThreadMsg};
+use channel_traits::DirectoryThread;
 
 pub trait UserThreadFactory {
-    fn new(w: Writer) -> Self;
+    fn new(w: Writer, directory: DirectoryThread) -> Self;
 }
 
 impl UserThreadFactory for UserThread {
-    fn new(w: Writer) -> UserThread {
+    fn new(w: Writer, directory: DirectoryThread) -> UserThread {
         let (tx,rx) = channel();
         thread::Builder::new().name("UserThread".to_string()).spawn(move || {
-            UserWorker::new(rx, w).run();
+            UserWorker::new(rx, w, directory).run();
         });
 
         tx
@@ -49,14 +50,21 @@ impl UserData {
 
 pub struct UserWorker {
     rx: Receiver<UserThreadMsg>,
+    directory: DirectoryThread,
     writer: Writer,
     state: State,
     modes: Vec<char>,
 }
 
 impl UserWorker {
-    fn new(rx: Receiver<UserThreadMsg>, writer: Writer) -> Self {
-        UserWorker{ rx: rx, writer: writer, state: State::NewConnection(None), modes: vec![] }
+    fn new(rx: Receiver<UserThreadMsg>, writer: Writer, directory: DirectoryThread) -> Self {
+        UserWorker{
+            rx: rx,
+            directory: directory,
+            writer: writer,
+            state: State::NewConnection(None),
+            modes: vec![]
+        }
     }
 
     fn run(&mut self) {

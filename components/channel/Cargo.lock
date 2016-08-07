@@ -1,11 +1,4 @@
 [root]
-name = "ircd"
-version = "0.1.0"
-dependencies = [
- "core 0.0.1",
-]
-
-[[package]]
 name = "channel"
 version = "0.0.1"
 dependencies = [
@@ -22,28 +15,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "core"
-version = "0.0.1"
-dependencies = [
- "channel 0.0.1",
- "net 0.0.1",
-]
-
-[[package]]
 name = "lazy_static"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "net"
-version = "0.0.1"
-dependencies = [
- "channel_traits 0.0.1",
- "net_traits 0.0.1",
- "user 0.0.1",
- "user_traits 0.0.1",
- "util 0.0.1",
-]
 
 [[package]]
 name = "net_traits"
@@ -58,16 +32,6 @@ version = "0.1.0"
 source = "git+https://github.com/PeterReid/schedule_recv#c3dce6d755cbe9aeb08bfd80e249c79c45dd0c60"
 dependencies = [
  "lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "user"
-version = "0.0.1"
-dependencies = [
- "channel_traits 0.0.1",
- "net_traits 0.0.1",
- "user_traits 0.0.1",
- "util 0.0.1",
 ]
 
 [[package]]

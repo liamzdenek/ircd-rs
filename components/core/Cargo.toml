@@ -9,3 +9,4 @@ path = "lib.rs"
 
 [dependencies]
 net = {path = "../net"}
+channel = {path = "../channel"}

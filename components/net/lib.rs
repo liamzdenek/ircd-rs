@@ -4,6 +4,7 @@ extern crate util;
 extern crate net_traits;
 extern crate user as usercomponent;
 extern crate user_traits;
+extern crate channel_traits;
 
 use std::net::{TcpListener, TcpStream};
 use std::thread;
@@ -16,9 +17,10 @@ pub mod writer_thread;
 pub use linefsm::*;
 pub use writer_thread::*;
 
+use channel_traits::DirectoryThread;
 use user::User;
 
-pub fn run() {
+pub fn run(directory: DirectoryThread) {
     println!("hello world");
     let listener = TcpListener::bind("0.0.0.0:3000").unwrap();
 
@@ -26,15 +28,12 @@ pub fn run() {
         match stream {
             Err(e) => panic!(e),
             Ok(stream) => {
+                let directory_clone = directory.clone();
                 thread::spawn(move|| {
-                    handle_client(stream);
+                    let err = User::new(stream, directory_clone).run();
+                    println!("Connection ended with err: {:?}", err);
                 });
             }
         }
     }
-}
-
-fn handle_client(stream: TcpStream) {
-    let err = User::new(stream).run();
-    println!("Connection ended with err: {:?}", err);
 }

@@ -1,5 +1,7 @@
 extern crate net;
+extern crate channel;
 
 pub fn run() {
-    net::run();
+    let directory = channel::DirectoryThreadFactory::new();
+    net::run(directory);
 }
