@@ -45,11 +45,15 @@ pub struct WriterData {
 pub enum RPL {
     Welcome{msg: String},
     YourHost,
-    Mode{mode: char, enabled: bool},
+    // Mode
+    ModeSelf{mode: char, enabled: bool},
+    Mode{target: String, mode: char, enabled: bool},
     // MOTD
     MotdStart,
     Motd(String),
     MotdEnd,
+    // ping
+    Pong(String),
 }
 
 impl RPL {
@@ -66,10 +70,16 @@ impl RPL {
                 sname = servername,
                 nick = data.nick,
             ),
-            &RPL::Mode{mode, enabled} => format!(":{nick} MODE {nick} :{sym}{mode}",
+            &RPL::ModeSelf{mode, enabled} => format!(":{nick} MODE {nick} :{sym}{mode}",
                 nick = data.nick,
                 sym = if enabled { "+" } else { "-" },
                 mode = mode,
+            ),
+            &RPL::Mode{ref target, mode, enabled} => format!(":{sname} MODE {target} {sym}{mode}",
+                target = target,
+                sname = servername,
+                sym = if enabled { "+" } else { "-" },
+                mode = mode
             ),
             &RPL::MotdStart => format!(":{sname} 375 :- {sname} Message of the Day -",
                 sname = servername,
@@ -79,6 +89,10 @@ impl RPL {
                 msg = msg,
             ),
             &RPL::MotdEnd => format!(":{sname} 376 :End of /MOTD command.", sname = servername),
+            &RPL::Pong(ref msg) => format!(":{sname} PONG {sname} :{msg}",
+                sname = servername,
+                msg = msg,
+            ),
         }
     }
 }

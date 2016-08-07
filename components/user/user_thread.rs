@@ -97,13 +97,13 @@ impl UserWorker {
     }
     fn handle_command(&mut self, mut cmd: ParsedCommand) -> bool{
         //TODO: handle htis better so that self.state is not cloned
-        self.state = match (self.state.clone(), cmd.command.as_ref()) {
+        match (self.state.clone(), cmd.command.as_ref()) {
             // TODO: add PASSWD support
             (State::NewConnection(maybe_data), "NICK") |
             (State::NewConnection(maybe_data), "USER") => {
                 let mut data = maybe_data.unwrap_or(Default::default());
                 data.apply(cmd);
-                if data.is_ready() {
+                self.state = if data.is_ready() {
                     println!("== Connected");
                     self.writer.update_nick(data.nick.clone());
                     self.introduce(&data);
@@ -113,9 +113,12 @@ impl UserWorker {
                     State::NewConnection(Some(data))
                 }
             },
+            (_, "PING") => {
+                self.writer.write(RPL::Pong(cmd.params[0].clone()));
+            },
             (_,_) => {
                 println!("I don't know how to handle CMD: {:?} at with STATE: {:?}", cmd.command, self.state);
-                return true;
+                //return true;
             }
         };
         return false;
@@ -143,11 +146,11 @@ impl UserWorker {
         if !self.modes.contains(&mode) {
             self.modes.push(mode);
         }
-        self.writer.write(RPL::Mode{mode: mode, enabled: true});
+        self.writer.write(RPL::ModeSelf{mode: mode, enabled: true});
     }
     
     fn remove_mode(&mut self, mode: char) {
         self.modes.retain(|e| (*e) != mode);
-        self.writer.write(RPL::Mode{mode: mode, enabled: false});
+        self.writer.write(RPL::ModeSelf{mode: mode, enabled: false});
     }
 }
