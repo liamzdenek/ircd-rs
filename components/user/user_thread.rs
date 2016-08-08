@@ -4,6 +4,7 @@ use std::thread;
 use net_traits::{Writer, ParsedCommand, RPL};
 use user_traits::{User, UserThread, UserThreadMsg};
 use channel_traits::{Directory, UserEntry};
+use channel_traits::error as channel_traits_error;
 
 pub trait UserThreadFactory {
     fn new(w: Writer, directory: Directory) -> Self;
@@ -117,6 +118,21 @@ impl UserWorker {
                 data.apply(cmd);
                 self.state = if data.is_ready() {
                     println!("== Connected");
+                    let has_collisions = self.user_entry.update_nick(data.nick.clone());
+                    println!("GOT BACK: {:?}", has_collisions);
+                    match has_collisions {
+                        Ok(_) => {
+                            println!("Nick has no collisions, good to continue");
+                        }
+                        Err(channel_traits_error::Error::NickCollision) => {
+                            println!("Nick has collisions, cannot continue");
+                            return false;
+                        }
+                        Err(e) => {
+                            println!("Internal error determining if nick has collisions: {:?}", e);
+                            return false;
+                        }
+                    }
                     self.writer.update_nick(data.nick.clone());
                     self.introduce(&data);
                     self.welcome(&data);

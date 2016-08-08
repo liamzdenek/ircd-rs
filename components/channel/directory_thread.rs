@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use channel_traits::*;
 use user_traits::User;
 use std::rc::{Rc,Weak};
+use std::cell::RefCell;
 
 pub trait DirectoryThreadFactory {
     fn new() -> Self;
@@ -19,6 +20,7 @@ impl DirectoryThreadFactory for DirectoryThread {
     }
 }
 
+#[derive(Debug)]
 struct DUserEntry {
     thread: User,
     nick: String,
@@ -26,8 +28,9 @@ struct DUserEntry {
 
 pub struct DirectoryWorker {
     rx: Receiver<DirectoryThreadMsg>,
-    users: Vec<Option<Rc<DUserEntry>>>,
-    users_by_name: HashMap<String, Weak<DUserEntry>>,
+    users: Vec<Option<Rc<RefCell<DUserEntry>>>>,
+    // todo, replace Rc<_> with Weak<_>, this could lead to potential memleaks otherwise
+    users_by_nick: HashMap<String, Rc<RefCell<DUserEntry>>>,
 }
 
 impl DirectoryWorker {
@@ -35,7 +38,7 @@ impl DirectoryWorker {
         DirectoryWorker{
             rx: rx,
             users: vec![],
-            users_by_name: HashMap::new(),
+            users_by_nick: HashMap::new(),
         }
     }
 
@@ -86,7 +89,7 @@ impl DirectoryWorker {
                 while self.users.len() <= i as usize {
                     self.users.push(None);
                 }
-                self.users[i as usize] = Some(Rc::new(entry));
+                self.users[i as usize] = Some(Rc::new(RefCell::new(entry)));
                 s.send(i);
                 i+=1;
             },
@@ -94,28 +97,44 @@ impl DirectoryWorker {
                 self.users[id as usize] = None;
             },
             DirectoryThreadMsg::UpdateNick(s,id,nick) => {
+                println!("Updating nick: {:?} |||||| {:?} |||||| {:?}", nick, self.users, self.users_by_nick);
                 let nick_in_use = {
-                    match self.users.get(id as usize) {
-                        Some(&Some(ref user)) => {
-                            if user.nick != nick {
-                                true
-                            } else {
-                                false
-                            }
+                    match self.users_by_nick.get(&nick) {
+                        Some(user) => {
+                            println!("UpdateNick Got user: {:?}", user);
+                            true
+                            /*
+                            match user.upgrade() {
+                                Some(user) => {
+                                    println!("Upgraded");
+                                    true
+                                }
+                                None => {
+                                    println!("Not Upgraded");
+                                    false
+                                }
+                            }*/
                         }
                         _ => false,
                     }
                 };
                 if nick_in_use {
+                    println!("Nick in use");
                     s.send(Err(Error::NickCollision));
                     return false;
                 }
-                match self.users.get(id as usize) {
-                    Some(&Some(ref user)) => {
-                        self.users_by_name.insert(nick, Rc::downgrade(user));
+                match self.users.get_mut(id as usize) {
+                    Some(&mut Some(ref user)) => {
+                        {
+                            let mut tuser = user.borrow_mut();
+                            tuser.nick = nick.clone().into();
+                        }
+                        self.users_by_nick.insert(nick.clone(), user.clone());//Rc::downgrade(user));
+                        //println!("ATTEMT IMMEDIATE UPGRADE: {:?}", self.users_by_nick.get(&nick).unwrap().upgrade());
                     }
                     _ => {}
                 }
+                s.send(Ok(()));
             },
             DirectoryThreadMsg::Exit => {
                 return true;

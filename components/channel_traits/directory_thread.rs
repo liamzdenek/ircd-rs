@@ -22,7 +22,7 @@ pub enum DirectoryThreadMsg {
     Exit,
 }
 
-#[derive(Clone)]
+#[derive(Debug,Clone)]
 /*
 the UserEntry type is responsible for managing a DirectoryId and informing the Directory when this type goes out of scope. It internally stores an Arc to both the Directory and the ID, and when it is freed, it sends DirectoryThreadMsg::DestroyUser(id) to the DirectoryThread. Sync is implemented for this type so be careful when modifying it
 */
@@ -32,6 +32,7 @@ pub struct UserEntry {
 
 unsafe impl Send for UserEntry{}
 
+#[derive(Debug)]
 struct StoredDirectoryId {
     directory: Directory,
     id: DirectoryId,
@@ -46,6 +47,11 @@ impl UserEntry {
             })
         }
     }
+    pub fn update_nick(&self, nick: String) -> Result<()> {
+        let stored = self.id.clone();
+        try!(try!(req_rep!(stored.directory.thread, DirectoryThreadMsg::UpdateNick => (stored.id, nick))));
+        Ok(())
+    }
 }
 
 impl Drop for StoredDirectoryId {
@@ -56,7 +62,7 @@ impl Drop for StoredDirectoryId {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Directory {
     thread: DirectoryThread,
 }
