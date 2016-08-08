@@ -108,8 +108,8 @@ impl UserWorker {
                 self.handle_command(cmd)
             },
             UserThreadMsg::Privmsg(src, msg) => {
-                println!("Received Privmsg -- <{}> {}", src.nick, msg);
-                self.writer.write(RPL::Privmsg(src.for_privmsg(), msg));
+                //println!("Received Privmsg -- <{}> {}", src, msg);
+                self.writer.write(RPL::Privmsg(src, msg));
                 false
             },
             UserThreadMsg::Exit => {
@@ -162,7 +162,7 @@ impl UserWorker {
                     Ok(user) => {
                         let string = cmd.params.split_at(1).1.join(" ") + cmd.trailing.join(" ").as_ref();
                         
-                        user.privmsg(data.gen_mask(), string);
+                        user.privmsg(data.gen_mask().for_privmsg(), string);
                     },
                     Err(channel_traits_error::NickNotFound) => {
                         self.writer.write(RPL::NickNotFound(cmd.params[0].clone()));

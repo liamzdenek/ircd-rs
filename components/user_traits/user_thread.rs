@@ -47,7 +47,7 @@ impl Mask {
 #[derive(Debug)]
 pub enum UserThreadMsg {
     Command(ParsedCommand),
-    Privmsg(Mask, String),
+    Privmsg(String, String),
     Exit,
 }
 
@@ -68,7 +68,7 @@ impl User {
         Ok(())
     }
 
-    pub fn privmsg(&self, src: Mask, msg: String) -> Result<()> {
+    pub fn privmsg(&self, src: String, msg: String) -> Result<()> {
         try!(send!(self.thread, UserThreadMsg::Privmsg => (src, msg)));
         Ok(())
     }
