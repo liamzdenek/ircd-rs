@@ -10,6 +10,7 @@ name = "channel"
 version = "0.0.1"
 dependencies = [
  "channel_traits 0.0.1",
+ "user_traits 0.0.1",
  "util 0.0.1",
 ]
 
@@ -26,6 +27,7 @@ name = "core"
 version = "0.0.1"
 dependencies = [
  "channel 0.0.1",
+ "channel_traits 0.0.1",
  "net 0.0.1",
 ]
 

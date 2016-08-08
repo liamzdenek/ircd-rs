@@ -6,7 +6,7 @@ extern crate user as usercomponent;
 extern crate user_traits;
 extern crate channel_traits;
 
-use std::net::{TcpListener, TcpStream};
+use std::net::{TcpListener};
 use std::thread;
 
 pub mod user;
@@ -17,10 +17,10 @@ pub mod writer_thread;
 pub use linefsm::*;
 pub use writer_thread::*;
 
-use channel_traits::DirectoryThread;
+use channel_traits::Directory;
 use user::User;
 
-pub fn run(directory: DirectoryThread) {
+pub fn run(directory: Directory) {
     println!("hello world");
     let listener = TcpListener::bind("0.0.0.0:3000").unwrap();
 

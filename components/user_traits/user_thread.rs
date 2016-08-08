@@ -11,6 +11,7 @@ pub enum UserThreadMsg {
     Exit,
 }
 
+#[derive(Debug, Clone)]
 pub struct User {
     thread: UserThread,
 }

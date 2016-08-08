@@ -10,3 +10,4 @@ path = "lib.rs"
 [dependencies]
 channel_traits = { path = "../channel_traits" }
 util = { path = "../util" }
+user_traits = { path = "../user_traits" }

@@ -2,18 +2,20 @@ use std::sync::mpsc::{channel, Receiver};
 use std::thread;
 
 use net_traits::{Writer, ParsedCommand, RPL};
-use user_traits::{UserThread, UserThreadMsg};
-use channel_traits::DirectoryThread;
+use user_traits::{User, UserThread, UserThreadMsg};
+use channel_traits::{Directory, UserEntry};
 
 pub trait UserThreadFactory {
-    fn new(w: Writer, directory: DirectoryThread) -> Self;
+    fn new(w: Writer, directory: Directory) -> Self;
 }
 
 impl UserThreadFactory for UserThread {
-    fn new(w: Writer, directory: DirectoryThread) -> UserThread {
+    fn new(w: Writer, directory: Directory) -> UserThread {
         let (tx,rx) = channel();
+        let user = User::new(tx.clone());
+        let entry = directory.new_user(user).unwrap();
         thread::Builder::new().name("UserThread".to_string()).spawn(move || {
-            UserWorker::new(rx, w, directory).run();
+            UserWorker::new(rx, w, directory, entry).run();
         });
 
         tx
@@ -50,16 +52,18 @@ impl UserData {
 
 pub struct UserWorker {
     rx: Receiver<UserThreadMsg>,
-    directory: DirectoryThread,
+    directory: Directory,
+    user_entry: UserEntry,
     writer: Writer,
     state: State,
     modes: Vec<char>,
 }
 
 impl UserWorker {
-    fn new(rx: Receiver<UserThreadMsg>, writer: Writer, directory: DirectoryThread) -> Self {
+    fn new(rx: Receiver<UserThreadMsg>, writer: Writer, directory: Directory, user_entry: UserEntry) -> Self {
         UserWorker{
             rx: rx,
+            user_entry: user_entry,
             directory: directory,
             writer: writer,
             state: State::NewConnection(None),
@@ -124,6 +128,9 @@ impl UserWorker {
             (_, "PING") => {
                 self.writer.write(RPL::Pong(cmd.params[0].clone()));
             },
+            /*(State::Connected{data}, "JOIN") => {
+                
+            },*/
             (_,_) => {
                 println!("I don't know how to handle CMD: {:?} at with STATE: {:?}", cmd.command, self.state);
                 //return true;

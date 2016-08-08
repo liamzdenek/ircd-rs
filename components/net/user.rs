@@ -5,18 +5,18 @@ use linefsm::LineFSM;
 use net_traits::*;
 use usercomponent::UserThreadFactory;
 use user_traits::{User as TUser};
-use channel_traits::DirectoryThread;
+use channel_traits::Directory;
 
 use super::{WriterThreadFactory};
 
 pub struct User {
     stream: TcpStream,
-    directory: DirectoryThread,
+    directory: Directory,
     buf: BufReader<TcpStream>,
 }
 
 impl User {
-    pub fn new(stream: TcpStream, directory: DirectoryThread) -> Self{
+    pub fn new(stream: TcpStream, directory: Directory) -> Self{
         User{
             buf: BufReader::new(stream.try_clone().unwrap()),
             stream: stream,

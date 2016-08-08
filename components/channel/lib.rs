@@ -2,6 +2,7 @@
 #[macro_use]
 extern crate util;
 extern crate channel_traits;
+extern crate user_traits;
 
 pub mod directory_thread;
 pub mod channel_thread;

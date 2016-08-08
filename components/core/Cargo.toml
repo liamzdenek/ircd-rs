@@ -10,3 +10,4 @@ path = "lib.rs"
 [dependencies]
 net = {path = "../net"}
 channel = {path = "../channel"}
+channel_traits = {path = "../channel_traits"}
