@@ -80,10 +80,11 @@ impl DirectoryWorker {
                 };
                 let mut i: u64 = 0;
                 for (j, v) in self.users.iter().enumerate() {
-                    i = j as u64;
                     if v.is_none() {
-                        i-=1;
+                        i = j as u64;
                         break;
+                    } else {
+                        i = j as u64 +1;
                     }
                 }
                 while self.users.len() <= i as usize {
@@ -91,9 +92,24 @@ impl DirectoryWorker {
                 }
                 self.users[i as usize] = Some(Rc::new(RefCell::new(entry)));
                 s.send(i);
-                i+=1;
             },
             DirectoryThreadMsg::DestroyUser(id) => {
+                let mut nick = None;
+                match self.users.get(id as usize) {
+                    Some(&Some(ref user)) => {
+                        nick = Some(user.borrow().nick.clone());
+                    }
+                    _ => {}
+                }
+                println!("=========================");
+                println!("unregistering user: {:?}", nick);
+                println!("=========================");
+                match nick {
+                    Some(nick) => {
+                        self.users_by_nick.remove(&nick);
+                    }
+                    None => {}
+                }
                 self.users[id as usize] = None;
             },
             DirectoryThreadMsg::UpdateNick(s,id,nick) => {

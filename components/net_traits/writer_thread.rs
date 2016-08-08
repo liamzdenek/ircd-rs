@@ -52,6 +52,9 @@ pub enum RPL {
     MotdStart,
     Motd(String),
     MotdEnd,
+    // NICK
+    NickInUse,
+    //NICK,
     // ping
     Pong(String),
 }
@@ -89,6 +92,10 @@ impl RPL {
                 msg = msg,
             ),
             &RPL::MotdEnd => format!(":{sname} 376 :End of /MOTD command.", sname = servername),
+            &RPL::NickInUse => format!(":{sname} 433 * {nick} :Nickname is already in use.",
+                sname = servername,
+                nick = data.nick,
+            ),
             &RPL::Pong(ref msg) => format!(":{sname} PONG {sname} :{msg}",
                 sname = servername,
                 msg = msg,

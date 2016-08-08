@@ -56,7 +56,7 @@ impl UserEntry {
 
 impl Drop for StoredDirectoryId {
     fn drop(&mut self) {
-        println!("Dropping Directory ID");
+        println!("Dropping Directory ID -- {:?}", self.id);
         // we're about to wipe out the last reference, inform directory thread of its destruction
         self.directory.destroy_user(self.id).unwrap();
     }

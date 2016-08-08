@@ -116,8 +116,10 @@ impl UserWorker {
             (State::NewConnection(maybe_data), "USER") => {
                 let mut data = maybe_data.unwrap_or(Default::default());
                 data.apply(cmd);
+                println!("checking is ready {:?}", data);
                 self.state = if data.is_ready() {
                     println!("== Connected");
+                    self.writer.update_nick(data.nick.clone());
                     let has_collisions = self.user_entry.update_nick(data.nick.clone());
                     println!("GOT BACK: {:?}", has_collisions);
                     match has_collisions {
@@ -126,14 +128,16 @@ impl UserWorker {
                         }
                         Err(channel_traits_error::Error::NickCollision) => {
                             println!("Nick has collisions, cannot continue");
+                            self.writer.write(RPL::NickInUse);
+                            self.state = State::NewConnection(Some(data));
                             return false;
                         }
                         Err(e) => {
                             println!("Internal error determining if nick has collisions: {:?}", e);
+                            self.state = State::NewConnection(Some(data));
                             return false;
                         }
                     }
-                    self.writer.update_nick(data.nick.clone());
                     self.introduce(&data);
                     self.welcome(&data);
                     State::Connected{data: data}
@@ -147,6 +151,9 @@ impl UserWorker {
             /*(State::Connected{data}, "JOIN") => {
                 
             },*/
+            (_, "QUIT") => {
+                return true;
+            },
             (_,_) => {
                 println!("I don't know how to handle CMD: {:?} at with STATE: {:?}", cmd.command, self.state);
                 //return true;
