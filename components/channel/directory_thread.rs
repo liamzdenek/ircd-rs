@@ -30,6 +30,7 @@ pub struct DirectoryWorker {
     rx: Receiver<DirectoryThreadMsg>,
     users: Vec<Option<Rc<RefCell<DUserEntry>>>>,
     // todo, replace Rc<_> with Weak<_>, this could lead to potential memleaks otherwise
+    // The DestroyUser handler should be very carefully modified as a consequence of this decision
     users_by_nick: HashMap<String, Rc<RefCell<DUserEntry>>>,
 }
 
@@ -70,8 +71,15 @@ impl DirectoryWorker {
             DirectoryThreadMsg::GetChannelByName(s, name) => {
 
             },
-            DirectoryThreadMsg::GetUserByName(s, name) => {
-
+            DirectoryThreadMsg::GetUserByNick(s, nick) => {
+                s.send(
+                    match self.users_by_nick.get(&nick) {
+                        Some(user) => {
+                            Ok(user.borrow().thread.clone())
+                        }
+                        None => Err(Error::NickNotFound)
+                    }
+                );
             },
             DirectoryThreadMsg::NewUser(s, user) => {
                 let entry = DUserEntry{

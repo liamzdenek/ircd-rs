@@ -1,7 +1,7 @@
 use std::sync::mpsc::{channel, Sender};
 use util::*;
 use super::Result;
-
+ 
 pub type WriterThread = Sender<WriterThreadMsg>;
 
 #[derive(Debug)]
@@ -54,9 +54,12 @@ pub enum RPL {
     MotdEnd,
     // NICK
     NickInUse,
+    NickNotFound(String),
     //NICK,
     // ping
     Pong(String),
+    //CHAT
+    Privmsg(String, String),
 }
 
 impl RPL {
@@ -95,6 +98,16 @@ impl RPL {
             &RPL::NickInUse => format!(":{sname} 433 * {nick} :Nickname is already in use.",
                 sname = servername,
                 nick = data.nick,
+            ),
+            &RPL::NickNotFound(ref target) => format!(":{sname} 401 {nick} {target} :No such nick/channel",
+                sname = servername,
+                nick = data.nick,
+                target = target,
+            ),
+            &RPL::Privmsg(ref mask, ref msg) => format!(":{mask} PRIVMSG {nick} :{msg}",
+                mask = mask,
+                nick = data.nick,
+                msg = msg,
             ),
             &RPL::Pong(ref msg) => format!(":{sname} PONG {sname} :{msg}",
                 sname = servername,

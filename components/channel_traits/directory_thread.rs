@@ -13,7 +13,7 @@ pub type DirectoryId = u64;
 pub enum DirectoryThreadMsg {
     GetChannels(Sender<Vec<ChannelThread>>),
     GetChannelByName(Sender<ChannelThread>, String),
-    GetUserByName(Sender<User>, String),
+    GetUserByNick(Sender<Result<User>>, String),
     // INVARIANT: The Sender of this NewUser msg MUST place this Id into a new UserEntry to ensure proper cleanup BEFORE any cloning to prevent double-free
     // it is impossible to handle this within the DirectoryThread itself because it would create a circular reference. even though it would work fine, it would  prevent the DirectoryThread from automatically cleaning up
     NewUser(Sender<DirectoryId>, User),
@@ -81,6 +81,10 @@ impl Directory {
     pub fn destroy_user(&self, id: DirectoryId) -> Result<()> {
         try!(send!(self.thread, DirectoryThreadMsg::DestroyUser => (id)));
         Ok(())
+    }
+
+    pub fn get_user_by_nick(&self, nick: String) -> Result<User> {
+        try!(req_rep!(self.thread, DirectoryThreadMsg::GetUserByNick => (nick)))
     }
 }
 

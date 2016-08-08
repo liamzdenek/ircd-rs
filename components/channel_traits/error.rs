@@ -6,6 +6,7 @@ pub type Result<T> = result::Result<T, Error>;
 #[derive(Debug)]
 pub enum Error {
     NickCollision,
+    NickNotFound,
     SendError(&'static str),
     RecvError(&'static str),
 }

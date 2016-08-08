@@ -2,9 +2,9 @@ use std::sync::mpsc::{channel, Receiver};
 use std::thread;
 
 use net_traits::{Writer, ParsedCommand, RPL};
-use user_traits::{User, UserThread, UserThreadMsg};
+use user_traits::*;
 use channel_traits::{Directory, UserEntry};
-use channel_traits::error as channel_traits_error;
+use channel_traits::error::Error as channel_traits_error;
 
 pub trait UserThreadFactory {
     fn new(w: Writer, directory: Directory) -> Self;
@@ -48,6 +48,10 @@ impl UserData {
 
     fn is_ready(&mut self) -> bool {
         return self.nick.len() > 0 && self.user_name.len() > 0 && self.real_name.len() > 0
+    }
+
+    fn gen_mask(&self) -> Mask {
+        Mask::new(self.nick.clone(), self.user_name.clone(), "TODO".into(), self.real_name.clone())
     }
 }
 
@@ -103,6 +107,11 @@ impl UserWorker {
             UserThreadMsg::Command(cmd) => {
                 self.handle_command(cmd)
             },
+            UserThreadMsg::Privmsg(src, msg) => {
+                println!("Received Privmsg -- <{}> {}", src.nick, msg);
+                self.writer.write(RPL::Privmsg(src.for_privmsg(), msg));
+                false
+            },
             UserThreadMsg::Exit => {
                 true
             }
@@ -110,7 +119,7 @@ impl UserWorker {
     }
     fn handle_command(&mut self, mut cmd: ParsedCommand) -> bool{
         //TODO: handle htis better so that self.state is not cloned
-        match (self.state.clone(), cmd.command.as_ref()) {
+        match (self.state.clone(), cmd.command.to_uppercase().as_ref()) {
             // TODO: add PASSWD support
             (State::NewConnection(maybe_data), "NICK") |
             (State::NewConnection(maybe_data), "USER") => {
@@ -126,7 +135,7 @@ impl UserWorker {
                         Ok(_) => {
                             println!("Nick has no collisions, good to continue");
                         }
-                        Err(channel_traits_error::Error::NickCollision) => {
+                        Err(channel_traits_error::NickCollision) => {
                             println!("Nick has collisions, cannot continue");
                             self.writer.write(RPL::NickInUse);
                             self.state = State::NewConnection(Some(data));
@@ -147,6 +156,21 @@ impl UserWorker {
             },
             (_, "PING") => {
                 self.writer.write(RPL::Pong(cmd.params[0].clone()));
+            },
+            (State::Connected{data}, "PRIVMSG") => {
+                match self.directory.get_user_by_nick(cmd.params[0].clone()) {
+                    Ok(user) => {
+                        let string = cmd.params.split_at(1).1.join(" ") + cmd.trailing.join(" ").as_ref();
+                        
+                        user.privmsg(data.gen_mask(), string);
+                    },
+                    Err(channel_traits_error::NickNotFound) => {
+                        self.writer.write(RPL::NickNotFound(cmd.params[0].clone()));
+                    },
+                    Err(_) => {
+
+                    },
+                }
             },
             /*(State::Connected{data}, "JOIN") => {
                 
