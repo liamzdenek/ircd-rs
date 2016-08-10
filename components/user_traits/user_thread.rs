@@ -47,7 +47,8 @@ impl Mask {
 #[derive(Debug)]
 pub enum UserThreadMsg {
     Command(ParsedCommand),
-    Privmsg(String, String),
+    Privmsg(String, String), // Src Mask, Msg
+    PrivmsgChan(String, String, String), // Mask, Channel, Msg
     JoinSelf(String),
     PartSelf(String, String), // Channel, Reason
     Exit,
@@ -72,6 +73,11 @@ impl User {
 
     pub fn privmsg(&self, src: String, msg: String) -> Result<()> {
         try!(send!(self.thread, UserThreadMsg::Privmsg => (src, msg)));
+        Ok(())
+    }
+    
+    pub fn privmsg_chan(&self, src: String, chan: String, msg: String) -> Result<()> {
+        try!(send!(self.thread, UserThreadMsg::PrivmsgChan => (src, chan, msg)));
         Ok(())
     }
 

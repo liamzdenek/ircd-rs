@@ -153,6 +153,11 @@ impl UserWorker {
                 self.writer.write(RPL::Privmsg(src, msg));
                 false
             },
+            UserThreadMsg::PrivmsgChan(src, chan, msg) => {
+                //println!("Received Privmsg -- <{}> {}", src, msg);
+                self.writer.write(RPL::PrivmsgChan(src, chan, msg));
+                false
+            },
             UserThreadMsg::Exit => {
                 true
             }
@@ -198,19 +203,40 @@ impl UserWorker {
             (_, "PING") => {
                 self.writer.write(RPL::Pong(cmd.params[0].clone()));
             },
+            (State::Connected{data}, "MODE") => {
+                // TODO: should send back a list of the modes affecting a user or channel
+            },
+            (State::Connected{data}, "WHO") => {
+                // TODO: should send back a list of the users within a channel
+            },
             (State::Connected{data}, "PRIVMSG") => {
-                match self.directory.get_user_by_nick(cmd.params[0].clone()) {
-                    Ok(user) => {
-                        let string = cmd.params.split_at(1).1.join(" ") + cmd.trailing.join(" ").as_ref();
-                        
-                        user.privmsg(data.gen_mask().for_privmsg(), string);
+                let msg_string = cmd.params.split_at(1).1.join(" ") + cmd.trailing.join(" ").as_ref();
+                match cmd.params[0].chars().next().to_owned() {
+                    Some('#') => {
+                        match self.get_channel(&cmd.params[0]) {
+                            Some(channel) => {
+                                channel.thread.privmsg(data.gen_mask().for_privmsg(), msg_string);
+                            }
+                            _ => {
+                                // find out what's supposed to happen when PRIVMSG a channel the user isn't in
+                                unimplemented!{};
+                            }
+                        }
                     },
-                    Err(channel_traits_error::NickNotFound) => {
-                        self.writer.write(RPL::NickNotFound(cmd.params[0].clone()));
-                    },
-                    Err(_) => {
+                    _ => {
+                        match self.directory.get_user_by_nick(cmd.params[0].clone()) {
+                            Ok(user) => {
+                                
+                                user.privmsg(data.gen_mask().for_privmsg(), msg_string);
+                            },
+                            Err(channel_traits_error::NickNotFound) => {
+                                self.writer.write(RPL::NickNotFound(cmd.params[0].clone()));
+                            },
+                            Err(_) => {
 
-                    },
+                            },
+                        };
+                    }
                 };
             },
             (State::Connected{data}, "JOIN") => {
@@ -288,7 +314,11 @@ impl UserWorker {
         self.writer.write(RPL::ModeSelf{mode: mode, enabled: false});
     }
 
+    fn get_channel(&mut self, name: &String) -> Option<&StoredChannel> {
+        self.channels.iter().find(|c| c.name == *name)
+    }
+
     fn is_in_channel(&mut self, name: &String) -> bool{
-        self.channels.iter().find(|c| c.name == *name).is_some()
+        self.get_channel(name).is_some()
     }
 }

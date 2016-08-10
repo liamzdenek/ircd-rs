@@ -60,7 +60,7 @@ pub enum RPL {
     Pong(String),
     //CHAT
     Privmsg(String, String), // Mask, Message
-
+    PrivmsgChan(String, String, String), // Mask, Chan, Message
     //
     Join(String, String), // Mask, ChannelName
     Part(String, String, String), // Mask, ChannelName, Reason
@@ -111,6 +111,11 @@ impl RPL {
             &RPL::Privmsg(ref mask, ref msg) => format!(":{mask} PRIVMSG {nick} :{msg}",
                 mask = mask,
                 nick = data.nick,
+                msg = msg,
+            ),
+            &RPL::PrivmsgChan(ref mask, ref chan, ref msg) => format!(":{mask} PRIVMSG {chan} :{msg}",
+                mask = mask,
+                chan = chan,
                 msg = msg,
             ),
             &RPL::Pong(ref msg) => format!(":{sname} PONG {sname} :{msg}",

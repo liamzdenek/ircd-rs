@@ -87,8 +87,22 @@ impl ChannelWorker {
                     self.users[id] = None;
                 };
             },
-            ChannelThreadMsg::Privmsg(src, msg) => {
+            ChannelThreadMsg::Who(s) => {
 
+            },
+            ChannelThreadMsg::Privmsg(id, mask, msg) => {
+                println!("[{chan}] <{mask}> {msg}", chan=self.name, mask=mask, msg=msg);
+                for (tid, user) in self.users.iter().enumerate() {
+                    if id == tid {
+                        continue;
+                    }
+                    match user {
+                        &Some(ref user) => {
+                            user.privmsg_chan(mask.clone(), self.name.clone(), msg.clone());
+                        },
+                        _ => {}
+                    }
+                }
             },
             ChannelThreadMsg::Exit => {
                 return true;

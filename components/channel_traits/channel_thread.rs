@@ -14,13 +14,14 @@ pub enum ChannelThreadMsg {
     // it is impossible to handle this within the ChannelThread itself because it would create a circular reference. Even though it would work fine, it would prevent the DirectoryThread from automatically cleaning up
     Join(Sender<ChannelId>, User),
     Part(ChannelId, Option<String>),
-    Privmsg(String, String),
+    Privmsg(ChannelId, String, String),
+    Who(Sender<Vec<User>>),
     Exit,
 }
 
 #[derive(Debug)]
 pub struct ChannelEntry {
-    id: Arc<StoredChannelId>
+    arc: Arc<StoredChannelId>
 }
 
 unsafe impl Send for ChannelEntry{}
@@ -28,12 +29,17 @@ unsafe impl Send for ChannelEntry{}
 impl ChannelEntry {
     unsafe fn new(channel: Channel, id: ChannelId) -> Self {
         ChannelEntry{
-            id: Arc::new(StoredChannelId{
+            arc: Arc::new(StoredChannelId{
                 channel: channel,
                 part_reason: None,
                 id: id,
             }),
         }
+    }
+
+    pub fn privmsg(&self, mask: String, msg: String) -> Result<()>{
+        try!(send!(self.arc.channel.thread, ChannelThreadMsg::Privmsg => (self.arc.id, mask, msg)));
+        Ok(())
     }
 }
 
