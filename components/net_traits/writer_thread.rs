@@ -59,7 +59,11 @@ pub enum RPL {
     // ping
     Pong(String),
     //CHAT
-    Privmsg(String, String),
+    Privmsg(String, String), // Mask, Message
+
+    //
+    Join(String, String), // Mask, ChannelName
+    Part(String, String, String), // Mask, ChannelName, Reason
 }
 
 impl RPL {
@@ -112,6 +116,15 @@ impl RPL {
             &RPL::Pong(ref msg) => format!(":{sname} PONG {sname} :{msg}",
                 sname = servername,
                 msg = msg,
+            ),
+            &RPL::Join(ref mask, ref chan) => format!(":{mask} JOIN {chan}",
+                mask=mask,
+                chan=chan
+            ),
+            &RPL::Part(ref mask, ref chan, ref reason) => format!(":{mask} PART {chan} :\"{reason}\"",
+                mask=mask,
+                chan=chan,
+                reason=reason,
             ),
         }
     }

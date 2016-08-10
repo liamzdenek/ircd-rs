@@ -115,6 +115,39 @@ impl UserWorker {
             UserThreadMsg::Command(cmd) => {
                 self.handle_command(cmd)
             },
+            UserThreadMsg::JoinSelf(chan_name) => {
+                match &self.state {
+                    &State::Connected{ref data} => {
+                        self.writer.write(RPL::Join(data.gen_mask().for_privmsg(), chan_name));
+                    }
+                    st => {
+                        println!("Cannot JOIN with state: {:?}", st);
+                    }
+                };
+                false
+            },
+            UserThreadMsg::PartSelf(chan_name, reason) => {
+                let should_remove = match &self.state {
+                    &State::Connected{ref data} => {
+                        self.writer.write(RPL::Part(data.gen_mask().for_privmsg(), chan_name.clone(), reason));
+                        true
+                    }
+                    st => {
+                        println!("Cannot JOIN with state: {:?}", st);
+                        false
+                    }
+                };
+                if should_remove {
+                    let found = match self.channels.iter().enumerate().find(|&(ref id, ref c)| c.name == chan_name) {
+                        Some((id, ref c)) => Some(id),
+                        None => None,
+                    };
+                    if let Some(id) = found {
+                        self.channels.swap_remove(id);
+                    }
+                }
+                false
+            },
             UserThreadMsg::Privmsg(src, msg) => {
                 //println!("Received Privmsg -- <{}> {}", src, msg);
                 self.writer.write(RPL::Privmsg(src, msg));

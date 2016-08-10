@@ -48,6 +48,8 @@ impl Mask {
 pub enum UserThreadMsg {
     Command(ParsedCommand),
     Privmsg(String, String),
+    JoinSelf(String),
+    PartSelf(String, String), // Channel, Reason
     Exit,
 }
 
@@ -70,6 +72,16 @@ impl User {
 
     pub fn privmsg(&self, src: String, msg: String) -> Result<()> {
         try!(send!(self.thread, UserThreadMsg::Privmsg => (src, msg)));
+        Ok(())
+    }
+
+    pub fn inform_join(&self, channel: String) -> Result<()> {
+        try!(send!(self.thread, UserThreadMsg::JoinSelf => (channel)));
+        Ok(())
+    }
+
+    pub fn inform_part(&self, channel: String, reason: String) -> Result<()> {
+        try!(send!(self.thread, UserThreadMsg::PartSelf => (channel, reason)));
         Ok(())
     }
 }
