@@ -5,6 +5,7 @@ use channel_traits::*;
 use user_traits::User;
 use std::rc::{Rc,Weak};
 use std::cell::RefCell;
+use super::ChannelThreadFactory;
 
 pub trait DirectoryThreadFactory {
     fn new() -> Self;
@@ -26,12 +27,18 @@ struct DUserEntry {
     nick: String,
 }
 
+#[derive(Debug)]
+struct DChannelEntry {
+    thread: Channel,
+}
+
 pub struct DirectoryWorker {
     rx: Receiver<DirectoryThreadMsg>,
     users: Vec<Option<Rc<RefCell<DUserEntry>>>>,
     // todo, replace Rc<_> with Weak<_>, this could lead to potential memleaks otherwise
     // The DestroyUser handler should be very carefully modified as a consequence of this decision
     users_by_nick: HashMap<String, Rc<RefCell<DUserEntry>>>,
+    channels_by_name: HashMap<String, DChannelEntry>,
 }
 
 impl DirectoryWorker {
@@ -40,6 +47,7 @@ impl DirectoryWorker {
             rx: rx,
             users: vec![],
             users_by_nick: HashMap::new(),
+            channels_by_name: HashMap::new(),
         }
     }
 
@@ -68,8 +76,21 @@ impl DirectoryWorker {
             DirectoryThreadMsg::GetChannels(s) => {
 
             },
-            DirectoryThreadMsg::GetChannelByName(s, name) => {
-
+            DirectoryThreadMsg::GetChannelByName(s, name, nick) => {
+                let has_new = match self.channels_by_name.get(&name) {
+                    Some(ref channel) => {
+                        s.send(channel.thread.clone());
+                        None
+                    },
+                    None => {
+                        let channel = Channel::new(ChannelThreadFactory::new(name.clone(), nick));
+                        s.send(channel.clone());
+                        Some(channel)
+                    }
+                };
+                if let Some(channel) = has_new {
+                    self.channels_by_name.insert(name, DChannelEntry{ thread: channel.clone() });
+                }
             },
             DirectoryThreadMsg::GetUserByNick(s, nick) => {
                 s.send(

@@ -3,7 +3,7 @@ use std::thread;
 
 use net_traits::{Writer, ParsedCommand, RPL};
 use user_traits::*;
-use channel_traits::{Directory, UserEntry};
+use channel_traits::{Directory, DirectoryEntry, Channel, ChannelEntry};
 use channel_traits::error::Error as channel_traits_error;
 
 pub trait UserThreadFactory {
@@ -36,6 +36,12 @@ struct UserData {
     real_name: String,
 }
 
+#[derive(Debug)]
+struct StoredChannel {
+    name: String,
+    thread: ChannelEntry,
+}
+
 impl UserData {
     fn apply(&mut self, mut cmd: ParsedCommand) {
         if cmd.command == "NICK" {
@@ -58,20 +64,22 @@ impl UserData {
 pub struct UserWorker {
     rx: Receiver<UserThreadMsg>,
     directory: Directory,
-    user_entry: UserEntry,
+    directory_entry: DirectoryEntry,
+    channels: Vec<StoredChannel>,
     writer: Writer,
     state: State,
     modes: Vec<char>,
 }
 
 impl UserWorker {
-    fn new(rx: Receiver<UserThreadMsg>, writer: Writer, directory: Directory, user_entry: UserEntry) -> Self {
+    fn new(rx: Receiver<UserThreadMsg>, writer: Writer, directory: Directory, directory_entry: DirectoryEntry) -> Self {
         UserWorker{
             rx: rx,
-            user_entry: user_entry,
+            directory_entry: directory_entry,
             directory: directory,
             writer: writer,
             state: State::NewConnection(None),
+            channels: vec![],
             modes: vec![]
         }
     }
@@ -129,7 +137,7 @@ impl UserWorker {
                 self.state = if data.is_ready() {
                     println!("== Connected");
                     self.writer.update_nick(data.nick.clone());
-                    let has_collisions = self.user_entry.update_nick(data.nick.clone());
+                    let has_collisions = self.directory_entry.update_nick(data.nick.clone());
                     println!("GOT BACK: {:?}", has_collisions);
                     match has_collisions {
                         Ok(_) => {
@@ -170,16 +178,47 @@ impl UserWorker {
                     Err(_) => {
 
                     },
-                }
+                };
             },
-            /*(State::Connected{data}, "JOIN") => {
-                
-            },*/
+            (State::Connected{data}, "JOIN") => {
+                let name = cmd.params[0].clone();
+                if self.is_in_channel(&name) {
+                    println!("Already in channel, doing nothing");
+                    return false;
+                }
+                match self.directory.get_channel_by_name(name.clone(), data.nick.clone()) {
+                    Ok(channel) => {
+                        println!("Got channel: {:?}", channel);
+                        match self.directory.get_user_by_nick(data.nick.clone()) {
+                            Ok(user) => {
+                                match channel.join(user) {
+                                    Ok(entry) => {
+                                        println!("Got entry: {:?}", entry);
+                                        self.channels.push(StoredChannel{
+                                            name: name.clone(),
+                                            thread: entry,
+                                        });
+                                    },
+                                    Err(e) => {
+                                        println!("Error during join process: {:?}", e);
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                println!("Error getting self to join channel: {:?}", e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        println!("Error joining channel: {:?}", e);
+                    }
+                };
+            },
             (_, "QUIT") => {
                 return true;
             },
             (_,_) => {
-                println!("I don't know how to handle CMD: {:?} at with STATE: {:?}", cmd.command, self.state);
+                println!("I don't know how to handle CMD: {:?} at with STATE: {:?}", cmd, self.state);
                 //return true;
             }
         };
@@ -214,5 +253,9 @@ impl UserWorker {
     fn remove_mode(&mut self, mode: char) {
         self.modes.retain(|e| (*e) != mode);
         self.writer.write(RPL::ModeSelf{mode: mode, enabled: false});
+    }
+
+    fn is_in_channel(&mut self, name: &String) -> bool{
+        self.channels.iter().find(|c| c.name == *name).is_some()
     }
 }
