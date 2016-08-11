@@ -69,16 +69,16 @@ impl ChannelWorker {
                 while self.users.len() <= i {
                     self.users.push(None);
                 }
+                s.send(i); // must come before introduce/welcome otherwise may cause deadlock
                 self.introduce(&user);
                 self.welcome(&user);
                 self.users[i] = Some(user);
-                s.send(i);
             },
             ChannelThreadMsg::Part(id, reason) => {
                 println!("Got part: {:?}", id);
                 let found = match self.users.get(id) {
                     Some(&Some(ref user)) => {
-                        user.inform_part(self.name.clone(), reason.unwrap_or("No Reason Provided".into()));
+                        user.inform_self_part(self.name.clone(), reason.unwrap_or("No Reason Provided".into()));
                         true
                     }
                     _ => false
@@ -126,11 +126,17 @@ impl ChannelWorker {
     }
 
     fn introduce(&mut self, user: &User) {
-        // TODO: send notice to all the users in this channel of this users join 
+        let mask = user.get_mask().unwrap().for_privmsg();
+        for tuser in self.users.iter() {
+            match tuser {
+                &Some(ref tuser) => {tuser.inform_other_join(mask.clone(), self.name.clone());},
+                _ => {},
+            }
+        }
     }
 
     fn welcome(&mut self, user: &User) {
-        user.inform_join(self.name.clone());
+        user.inform_self_join(self.name.clone());
     }
 
 }

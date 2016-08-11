@@ -121,6 +121,10 @@ impl UserWorker {
             UserThreadMsg::Command(cmd) => {
                 self.handle_command(cmd)
             },
+            UserThreadMsg::JoinOther(mask, chan_name) => {
+                self.writer.write(RPL::Join(mask, chan_name));
+                false
+            },
             UserThreadMsg::JoinSelf(chan_name) => {
                 match &self.state {
                     &State::Connected{ref data} => {
@@ -130,6 +134,10 @@ impl UserWorker {
                         println!("Cannot JOIN with state: {:?}", st);
                     }
                 };
+                false
+            },
+            UserThreadMsg::PartOther(mask, chan_name, reason) => {
+                self.writer.write(RPL::Part(mask, chan_name, reason));
                 false
             },
             UserThreadMsg::PartSelf(chan_name, reason) => {

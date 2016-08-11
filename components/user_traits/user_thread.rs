@@ -51,6 +51,8 @@ pub enum UserThreadMsg {
     PrivmsgChan(String, String, String), // Mask, Channel, Msg
     JoinSelf(String),
     PartSelf(String, String), // Channel, Reason
+    JoinOther(String, String), // Mask,  Channel
+    PartOther(String, String, String), // Mask, Channel, Reason
     GetMask(Sender<Result<Mask>>),
     TransmitNames(String, Vec<String>), // Channel, Names
     Exit,
@@ -83,13 +85,18 @@ impl User {
         Ok(())
     }
 
-    pub fn inform_join(&self, channel: String) -> Result<()> {
+    pub fn inform_self_join(&self, channel: String) -> Result<()> {
         try!(send!(self.thread, UserThreadMsg::JoinSelf => (channel)));
         Ok(())
     }
 
-    pub fn inform_part(&self, channel: String, reason: String) -> Result<()> {
+    pub fn inform_self_part(&self, channel: String, reason: String) -> Result<()> { 
         try!(send!(self.thread, UserThreadMsg::PartSelf => (channel, reason)));
+        Ok(())
+    }
+
+    pub fn inform_other_join(&self, mask: String, channel: String) -> Result<()> {
+        try!(send!(self.thread, UserThreadMsg::JoinOther => (mask, channel)));
         Ok(())
     }
 
