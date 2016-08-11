@@ -100,6 +100,11 @@ impl User {
         Ok(())
     }
 
+    pub fn inform_other_part(&self, mask: String, channel: String, reason: String) -> Result<()> {
+        try!(send!(self.thread, UserThreadMsg::PartOther => (mask, channel, reason)));
+        Ok(())
+    }
+
     pub fn get_mask(&self) -> Result<Mask> {
         Ok(try!(try!(req_rep!(self.thread, UserThreadMsg::GetMask => ()))))
     }

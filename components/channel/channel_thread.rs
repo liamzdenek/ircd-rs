@@ -74,17 +74,23 @@ impl ChannelWorker {
                 self.welcome(&user);
                 self.users[i] = Some(user);
             },
-            ChannelThreadMsg::Part(id, reason) => {
+            ChannelThreadMsg::Part(id, mask, reason) => {
                 println!("Got part: {:?}", id);
+                let reason = reason.unwrap_or("No reason provided".into());
                 let found = match self.users.get(id) {
                     Some(&Some(ref user)) => {
-                        user.inform_self_part(self.name.clone(), reason.unwrap_or("No Reason Provided".into()));
+                        user.inform_self_part(self.name.clone(), reason.clone());
                         true
                     }
                     _ => false
                 };
                 if found {
-                    self.users[id] = None;
+                    match self.users[id].take() {
+                        Some(user) => {
+                            self.adios(mask, &user, reason);
+                        },
+                        _ => {},
+                    }
                 };
             },
             ChannelThreadMsg::Who(id) => {
@@ -130,6 +136,17 @@ impl ChannelWorker {
         for tuser in self.users.iter() {
             match tuser {
                 &Some(ref tuser) => {tuser.inform_other_join(mask.clone(), self.name.clone());},
+                _ => {},
+            }
+        }
+    }
+
+    fn adios(&mut self, mask: String, user: &User, reason: String) {
+        for tuser in self.users.iter() {
+            match tuser {
+                &Some(ref tuser) => {
+                    tuser.inform_other_part(mask.clone(), self.name.clone(), reason.clone());
+                },
                 _ => {},
             }
         }

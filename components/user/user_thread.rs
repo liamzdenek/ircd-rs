@@ -280,6 +280,7 @@ impl UserWorker {
                                 match channel.join(user) {
                                     Ok(entry) => {
                                         println!("Got entry: {:?}", entry);
+                                        entry.update_mask(data.nick.clone());
                                         self.channels.push(StoredChannel{
                                             name: name.clone(),
                                             thread: entry,

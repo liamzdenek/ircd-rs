@@ -3,6 +3,8 @@ use std::sync::Arc;
 use util::*;
 use super::Result;
 use user_traits::User;
+use std::borrow::BorrowMut;
+use std::sync::RwLock;
 
 pub type ChannelThread = Sender<ChannelThreadMsg>;
 
@@ -13,7 +15,7 @@ pub enum ChannelThreadMsg {
     // INVARIANT: The Sender of this Join msg MUST place the ChannelId into a new ChannelEntry to ensure proper cleanup BEFORE any cloning to prevent double-free
     // it is impossible to handle this within the ChannelThread itself because it would create a circular reference. Even though it would work fine, it would prevent the DirectoryThread from automatically cleaning up
     Join(Sender<ChannelId>, User),
-    Part(ChannelId, Option<String>),
+    Part(ChannelId, String, Option<String>),
     Privmsg(ChannelId, String, String),
     Who(ChannelId),
     Exit,
@@ -21,7 +23,7 @@ pub enum ChannelThreadMsg {
 
 #[derive(Debug, Clone)]
 pub struct ChannelEntry {
-    arc: Arc<StoredChannelId>
+    arc: Arc<RwLock<StoredChannelId>>
 }
 
 unsafe impl Send for ChannelEntry{}
@@ -29,21 +31,29 @@ unsafe impl Send for ChannelEntry{}
 impl ChannelEntry {
     unsafe fn new(channel: Channel, id: ChannelId) -> Self {
         ChannelEntry{
-            arc: Arc::new(StoredChannelId{
+            arc: Arc::new(RwLock::new(StoredChannelId{
                 channel: channel,
                 part_reason: None,
+                mask: "".into(),
                 id: id,
-            }),
+            })),
         }
     }
 
+    pub fn update_mask(&self, mask: String) {
+        let mut locked = self.arc.write().unwrap();
+        locked.mask = mask.into();
+    }
+
     pub fn privmsg(&self, mask: String, msg: String) -> Result<()>{
-        try!(send!(self.arc.channel.thread, ChannelThreadMsg::Privmsg => (self.arc.id, mask, msg)));
+        let locked = self.arc.read().unwrap();
+        try!(send!(locked.channel.thread, ChannelThreadMsg::Privmsg => (locked.id, mask, msg)));
         Ok(())
     }
 
     pub fn who(&self) -> Result<()> {
-        try!(send!(self.arc.channel.thread, ChannelThreadMsg::Who => (self.arc.id)));
+        let locked = self.arc.read().unwrap();
+        try!(send!(locked.channel.thread, ChannelThreadMsg::Who => (locked.id)));
         Ok(())
     }
 }
@@ -52,13 +62,14 @@ impl ChannelEntry {
 struct StoredChannelId {
     channel: Channel,
     part_reason: Option<String>,
+    mask: String,
     id: ChannelId,
 }
 
 impl Drop for StoredChannelId {
     fn drop(&mut self) {
         println!("Dropping Channel ID -- {:?}", self.id);
-        self.channel.part(self.id, self.part_reason.take()).unwrap();
+        self.channel.part(self.id, self.mask.clone(), self.part_reason.take()).unwrap();
     }
 }
 
@@ -79,8 +90,8 @@ impl Channel {
         }
     }
 
-    fn part(&self, id: ChannelId, reason: Option<String>) -> Result<()> {
-        try!(send!(self.thread, ChannelThreadMsg::Part => (id, reason)));
+    fn part(&self, id: ChannelId, mask: String, reason: Option<String>) -> Result<()> {
+        try!(send!(self.thread, ChannelThreadMsg::Part => (id, mask, reason)));
         Ok(())
     }
 }
