@@ -8,6 +8,7 @@ pub enum Error {
     SendError(&'static str),
     RecvError(&'static str),
     MalformedString,
+    InvalidState,
 }
 
 impl From<ChanError> for Error {

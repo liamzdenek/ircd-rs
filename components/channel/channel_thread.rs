@@ -87,8 +87,22 @@ impl ChannelWorker {
                     self.users[id] = None;
                 };
             },
-            ChannelThreadMsg::Who(s) => {
-
+            ChannelThreadMsg::Who(id) => {
+                let users = self.users.clone().into_iter().enumerate().filter_map(|(tid, user)| {
+                    user
+                });
+                match self.users.get(id) {
+                    Some(&Some(ref user)) => {
+                        let mut names = vec![];
+                        for member in users {
+                            if let Ok(mask) = member.get_mask() {
+                                names.push(mask.nick.to_owned())
+                            }
+                        }
+                        user.transmit_names(self.name.clone(), names);
+                    },
+                    _ => {}
+                }
             },
             ChannelThreadMsg::Privmsg(id, mask, msg) => {
                 println!("[{chan}] <{mask}> {msg}", chan=self.name, mask=mask, msg=msg);

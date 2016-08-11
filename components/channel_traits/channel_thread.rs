@@ -15,11 +15,11 @@ pub enum ChannelThreadMsg {
     Join(Sender<ChannelId>, User),
     Part(ChannelId, Option<String>),
     Privmsg(ChannelId, String, String),
-    Who(Sender<Vec<User>>),
+    Who(ChannelId),
     Exit,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ChannelEntry {
     arc: Arc<StoredChannelId>
 }
@@ -39,6 +39,11 @@ impl ChannelEntry {
 
     pub fn privmsg(&self, mask: String, msg: String) -> Result<()>{
         try!(send!(self.arc.channel.thread, ChannelThreadMsg::Privmsg => (self.arc.id, mask, msg)));
+        Ok(())
+    }
+
+    pub fn who(&self) -> Result<()> {
+        try!(send!(self.arc.channel.thread, ChannelThreadMsg::Who => (self.arc.id)));
         Ok(())
     }
 }

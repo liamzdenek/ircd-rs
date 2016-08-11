@@ -24,6 +24,12 @@ impl UserThreadFactory for UserThread {
 }
 
 #[derive(Debug, Clone)]
+enum Communicable {
+    Channel(Option<ChannelEntry>),
+    User(Option<User>),
+}
+
+#[derive(Debug, Clone)]
 enum State {
     NewConnection(Option<UserData>),
     Connected{data: UserData},
@@ -148,6 +154,20 @@ impl UserWorker {
                 }
                 false
             },
+            UserThreadMsg::TransmitNames(chan, names) => {
+                self.writer.write(RPL::NameReply(chan.clone(), names));
+                self.writer.write(RPL::EndOfNames(chan));
+                false
+            },
+            UserThreadMsg::GetMask(s) => {
+                s.send(match &self.state {
+                    &State::Connected{ref data} => {
+                        Ok(data.gen_mask())
+                    },
+                    _ => Err(Error::InvalidState),
+                });
+                false
+            },
             UserThreadMsg::Privmsg(src, msg) => {
                 //println!("Received Privmsg -- <{}> {}", src, msg);
                 self.writer.write(RPL::Privmsg(src, msg));
@@ -208,35 +228,34 @@ impl UserWorker {
             },
             (State::Connected{data}, "WHO") => {
                 // TODO: should send back a list of the users within a channel
+                match self.get_communicable(&cmd.params[0]) {
+                    Communicable::Channel(Some(channel)) => {
+                        channel.who().unwrap();
+                    },
+                    Communicable::Channel(None) => {
+                        println!("Cannot get WHO for a channel we're not in");
+                    },
+                    Communicable::User(_) => {
+                        println!("TODO: WHO command for users");
+                    }
+                }
             },
             (State::Connected{data}, "PRIVMSG") => {
                 let msg_string = cmd.params.split_at(1).1.join(" ") + cmd.trailing.join(" ").as_ref();
-                match cmd.params[0].chars().next().to_owned() {
-                    Some('#') => {
-                        match self.get_channel(&cmd.params[0]) {
-                            Some(channel) => {
-                                channel.thread.privmsg(data.gen_mask().for_privmsg(), msg_string);
-                            }
-                            _ => {
-                                // find out what's supposed to happen when PRIVMSG a channel the user isn't in
-                                unimplemented!{};
-                            }
-                        }
+                match self.get_communicable(&cmd.params[0]) {
+                    Communicable::Channel(Some(channel)) => {
+                        channel.privmsg(data.gen_mask().for_privmsg(), msg_string);
                     },
-                    _ => {
-                        match self.directory.get_user_by_nick(cmd.params[0].clone()) {
-                            Ok(user) => {
-                                
-                                user.privmsg(data.gen_mask().for_privmsg(), msg_string);
-                            },
-                            Err(channel_traits_error::NickNotFound) => {
-                                self.writer.write(RPL::NickNotFound(cmd.params[0].clone()));
-                            },
-                            Err(_) => {
-
-                            },
-                        };
-                    }
+                    Communicable::Channel(None) => {
+                        // find out what's supposed to happen when PRIVMSG a channel the user isn't in
+                        unimplemented!{};
+                    },
+                    Communicable::User(Some(user)) => {
+                        user.privmsg(data.gen_mask().for_privmsg(), msg_string);
+                    },
+                    Communicable::User(None) => {
+                        self.writer.write(RPL::NickNotFound(cmd.params[0].clone()));
+                    },
                 };
             },
             (State::Connected{data}, "JOIN") => {
@@ -312,6 +331,27 @@ impl UserWorker {
     fn remove_mode(&mut self, mode: char) {
         self.modes.retain(|e| (*e) != mode);
         self.writer.write(RPL::ModeSelf{mode: mode, enabled: false});
+    }
+
+    fn get_communicable(&mut self, name: &String) -> Communicable {
+        match name.chars().next().to_owned() {
+            Some('#') => {
+                match self.get_channel(name) {
+                    Some(channel) => {
+                        Communicable::Channel(Some(channel.thread.clone()))
+                    }
+                    None => Communicable::Channel(None),
+                }
+            },
+            _ => {
+                match self.directory.get_user_by_nick(name.clone()) {
+                    Ok(user) => {
+                        Communicable::User(Some(user))
+                    }
+                    Err(_) => Communicable::User(None)
+                }
+            }
+        }
     }
 
     fn get_channel(&mut self, name: &String) -> Option<&StoredChannel> {

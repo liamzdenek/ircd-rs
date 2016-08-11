@@ -39,6 +39,7 @@ impl Writer {
 #[derive(Default,Debug)]
 pub struct WriterData {
     pub nick: String,
+    pub cur_chan: String,
 }
 
 #[derive(Debug)]
@@ -64,10 +65,17 @@ pub enum RPL {
     //
     Join(String, String), // Mask, ChannelName
     Part(String, String, String), // Mask, ChannelName, Reason
+
+    WhoReply(String),
+    WhoSpcRpl(String, String), // Mask, Modes
+    EndOfWho,
+
+    NameReply(String, Vec<String>), // ChannelName, Names
+    EndOfNames(String), // ChannelName
 }
 
 impl RPL {
-    pub fn raw(&self, data: &WriterData) -> String {
+    pub fn raw(&self, data: &mut WriterData) -> String {
         //TODO: Proper config
         let servername = "test.localhost";
         match self {
@@ -130,6 +138,35 @@ impl RPL {
                 mask=mask,
                 chan=chan,
                 reason=reason,
+            ),
+            &RPL::WhoReply(ref chan) => {
+                data.cur_chan = chan.clone().into();
+                format!(":{sname} 352 {chan} %ctnf,152",
+                    sname=servername,
+                    chan=chan,
+                )
+            }
+            &RPL::WhoSpcRpl(ref mask, ref modes) => format!(":{sname} 354 {mask} 152 {chan} {mask} {modes}",
+                sname=servername,
+                chan=data.cur_chan,
+                mask=mask,
+                modes=modes,
+            ),
+            &RPL::EndOfWho => format!(":{sname} 315 {nick} {chan} :End of /WHO list.",
+                sname=servername,
+                nick=data.nick,
+                chan=data.cur_chan,
+            ),
+            &RPL::NameReply(ref channel, ref names) => format!(":{sname} 353 {nick} @ {channel} :{names}",
+                sname=servername,
+                nick=data.nick,
+                channel=channel,
+                names=names.join(" "),
+            ),
+            &RPL::EndOfNames(ref channel) => format!(":{sname} 366 {nick} {channel} :End of /NAMES list",
+                sname=servername,
+                nick=data.nick,
+                channel=channel,
             ),
         }
     }

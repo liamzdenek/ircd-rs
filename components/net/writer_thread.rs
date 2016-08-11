@@ -60,7 +60,7 @@ impl WriterWorker {
                 self.stream.write(raw.into_bytes().as_slice());
             },
             WriterThreadMsg::Send(rpl) => {
-                let raw = rpl.raw(&self.data);
+                let raw = rpl.raw(&mut self.data);
                 println!(">> {} -- from {:?}", raw, rpl);
                 self.stream.write(format!("{}\r\n", raw).into_bytes().as_slice());
             },
