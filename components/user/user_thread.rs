@@ -302,12 +302,12 @@ impl UserWorker {
                 };
             },
             (State::Connected{data}, "PART") => {
-                let name = match cmd.params.len() {
+                let (name, reason) = match cmd.params.len() {
                     0 => {
-                        cmd.trailing[0].clone()
+                        (cmd.trailing[0].clone(), None)
                     }
                     _ => {
-                        cmd.params[0].clone()
+                        (cmd.params[0].clone(), Some(cmd.trailing.join(" ")))
                     }
                 };
                 println!("Looking for channel: {:?}", name);
@@ -316,7 +316,14 @@ impl UserWorker {
                     return false;
                 }
                 println!("Draining");
-                let drained = self.channels.drain(..).filter(|c| c.name != *name).collect();
+                let drained = self.channels.drain(..).filter(|c| {
+                    if c.name == *name {
+                        c.thread.part_reason(reason.clone());
+                        false
+                    } else {
+                        true
+                    }
+                }).collect();
                 println!("drained: {:?}", drained);
                 self.channels = drained;
 

@@ -45,6 +45,11 @@ impl ChannelEntry {
         locked.mask = mask.into();
     }
 
+    pub fn part_reason(&self, reason: Option<String>) {
+        let mut locked = self.arc.write().unwrap();
+        locked.part_reason = reason;
+    }
+
     pub fn privmsg(&self, mask: String, msg: String) -> Result<()>{
         let locked = self.arc.read().unwrap();
         try!(send!(locked.channel.thread, ChannelThreadMsg::Privmsg => (locked.id, mask, msg)));
@@ -68,7 +73,7 @@ struct StoredChannelId {
 
 impl Drop for StoredChannelId {
     fn drop(&mut self) {
-        println!("Dropping Channel ID -- {:?}", self.id);
+        println!("Dropping Channel ID -- {:?} -- {:?}", self.id, self.part_reason);
         self.channel.part(self.id, self.mask.clone(), self.part_reason.take()).unwrap();
     }
 }
