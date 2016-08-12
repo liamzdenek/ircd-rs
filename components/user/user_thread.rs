@@ -301,6 +301,26 @@ impl UserWorker {
                     }
                 };
             },
+            (State::Connected{data}, "PART") => {
+                let name = match cmd.params.len() {
+                    0 => {
+                        cmd.trailing[0].clone()
+                    }
+                    _ => {
+                        cmd.params[0].clone()
+                    }
+                };
+                println!("Looking for channel: {:?}", name);
+                if !self.is_in_channel(&name) {
+                    println!("Not in channel, doing nothing");
+                    return false;
+                }
+                println!("Draining");
+                let drained = self.channels.drain(..).filter(|c| c.name != *name).collect();
+                println!("drained: {:?}", drained);
+                self.channels = drained;
+
+            },
             (_, "QUIT") => {
                 return true;
             },
