@@ -8,6 +8,8 @@ name = "core"
 path = "lib.rs"
 
 [dependencies]
-net = {path = "../net"}
-channel = {path = "../channel"}
-channel_traits = {path = "../channel_traits"}
+net = { path = "../net" }
+channel = { path = "../channel" }
+channel_traits = { path = "../channel_traits" }
+server = { path = "../server" }
+server_traits = { path = "../server_traits" }

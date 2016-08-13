@@ -29,6 +29,8 @@ dependencies = [
  "channel 0.0.1",
  "channel_traits 0.0.1",
  "net 0.0.1",
+ "server 0.0.1",
+ "server_traits 0.0.1",
 ]
 
 [[package]]
@@ -42,6 +44,7 @@ version = "0.0.1"
 dependencies = [
  "channel_traits 0.0.1",
  "net_traits 0.0.1",
+ "server_traits 0.0.1",
  "user 0.0.1",
  "user_traits 0.0.1",
  "util 0.0.1",
@@ -60,6 +63,40 @@ version = "0.1.0"
 source = "git+https://github.com/PeterReid/schedule_recv#c3dce6d755cbe9aeb08bfd80e249c79c45dd0c60"
 dependencies = [
  "lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "serde"
+version = "0.7.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "serde_yaml"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "serde 0.7.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "yaml-rust 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "server"
+version = "0.0.1"
+dependencies = [
+ "channel_traits 0.0.1",
+ "net_traits 0.0.1",
+ "serde 0.7.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_yaml 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "server_traits 0.0.1",
+ "user_traits 0.0.1",
+ "util 0.0.1",
+]
+
+[[package]]
+name = "server_traits"
+version = "0.0.1"
+dependencies = [
+ "util 0.0.1",
 ]
 
 [[package]]
@@ -87,6 +124,14 @@ dependencies = [
  "schedule_recv 0.1.0 (git+https://github.com/PeterReid/schedule_recv)",
 ]
 
+[[package]]
+name = "yaml-rust"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
 [metadata]
 "checksum lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "49247ec2a285bb3dcb23cbd9c35193c025e7251bfce77c1d5da97e6362dffe7f"
 "checksum schedule_recv 0.1.0 (git+https://github.com/PeterReid/schedule_recv)" = "<none>"
+"checksum serde 0.7.15 (registry+https://github.com/rust-lang/crates.io-index)" = "1b0e0732aa8ec4267f61815a396a942ba3525062e3bd5520aa8419927cfc0a92"
+"checksum serde_yaml 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "1b1697437d76a35ed1e80a54e0e75ae4f5594fd3cc5ee8790c23fce8c08a2fad"
+"checksum yaml-rust 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "ebfe12f475ad59be6178ebf004d51e682022496535994f8d23fd7ed31084598c"

@@ -6,27 +6,30 @@ use net_traits::*;
 use usercomponent::UserThreadFactory;
 use user_traits::{User as TUser};
 use channel_traits::Directory;
+use server_traits::Config;
 
 use super::{WriterThreadFactory};
 
 pub struct User {
     stream: TcpStream,
     directory: Directory,
+    config: Config,
     buf: BufReader<TcpStream>,
 }
 
 impl User {
-    pub fn new(stream: TcpStream, directory: Directory) -> Self{
+    pub fn new(stream: TcpStream, config: Config, directory: Directory) -> Self{
         User{
             buf: BufReader::new(stream.try_clone().unwrap()),
             stream: stream,
             directory: directory,
+            config: config,
         }
     }
 
     pub fn run(&mut self) -> Result<()>{
         let mut fsm = LineFSM::new();
-        let writer = Writer::new(WriterThreadFactory::new(self.stream.try_clone().unwrap()));
+        let writer = Writer::new(WriterThreadFactory::new(self.stream.try_clone().unwrap(), self.config.clone()));
         let user = TUser::new(UserThreadFactory::new(writer, self.directory.clone()));
         loop {
             let line = try!(self.read_line());

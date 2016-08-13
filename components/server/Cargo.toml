@@ -1,16 +1,17 @@
 [package]
-name = "net"
+name = "server"
 version = "0.0.1"
 authors = []
 
 [lib]
-name = "net"
+name = "server"
 path = "lib.rs"
 
 [dependencies]
-user = { path = "../user" }
+user_traits = { path = "../user_traits" }
 util = { path = "../util" }
 net_traits = { path = "../net_traits" }
-user_traits = { path = "../user_traits" }
 channel_traits = { path = "../channel_traits" }
 server_traits = { path = "../server_traits" }
+serde = "^0.7"
+serde_yaml = "^0.2"

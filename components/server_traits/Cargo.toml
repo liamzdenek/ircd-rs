@@ -1,0 +1,11 @@
+[package]
+name = "server_traits"
+version = "0.0.1"
+authors = []
+
+[lib]
+name = "server_traits"
+path = "lib.rs"
+
+[dependencies]
+util = { path = "../util" }

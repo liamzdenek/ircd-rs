@@ -40,6 +40,7 @@ impl Writer {
 pub struct WriterData {
     pub nick: String,
     pub cur_chan: String,
+    pub server_name: String,
 }
 
 #[derive(Debug)]
@@ -77,7 +78,7 @@ pub enum RPL {
 impl RPL {
     pub fn raw(&self, data: &mut WriterData) -> String {
         //TODO: Proper config
-        let servername = "test.localhost";
+        let servername = &data.server_name;
         match self {
             &RPL::Welcome{ref msg} => format!(":{sname} 001 {nick} :{msg}",
                 sname = servername,
