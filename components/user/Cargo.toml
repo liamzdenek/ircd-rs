@@ -12,3 +12,4 @@ user_traits = { path = "../user_traits" }
 util = { path = "../util" }
 net_traits = { path = "../net_traits" }
 channel_traits = { path = "../channel_traits" }
+server = { path = "../server" }

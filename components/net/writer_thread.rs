@@ -47,7 +47,7 @@ impl WriterWorker {
                             }
                         },
                         Err(e) => {
-                            println!("UserThread Got error: {:?}", e);
+                            println!("WriterWorker Got error: {:?}", e);
                             return;
                         }
                     }

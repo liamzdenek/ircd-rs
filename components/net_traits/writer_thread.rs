@@ -11,6 +11,7 @@ pub enum WriterThreadMsg {
     UpdateNick(String),
 }
 
+#[derive(Debug, Clone)]
 pub struct Writer {
     thread: WriterThread,
 }

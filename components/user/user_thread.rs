@@ -5,6 +5,7 @@ use net_traits::{Writer, ParsedCommand, RPL};
 use user_traits::*;
 use channel_traits::{Directory, DirectoryEntry, Channel, ChannelEntry};
 use channel_traits::error::Error as channel_traits_error;
+use server::ServerWorker;
 
 pub trait UserThreadFactory {
     fn new(w: Writer, directory: Directory) -> Self;
@@ -16,7 +17,11 @@ impl UserThreadFactory for UserThread {
         let user = User::new(tx.clone());
         let entry = directory.new_user(user).unwrap();
         thread::Builder::new().name("UserThread".to_string()).spawn(move || {
-            UserWorker::new(rx, w, directory, entry).run();
+            let do_upgrade = UserWorker::new(&rx, w.clone(), directory.clone(), entry).run();
+            if do_upgrade {
+                // allow directory entry (var entry) to out of scope
+                ServerWorker::new(rx, w, directory).run();
+            }
         });
 
         tx
@@ -67,18 +72,19 @@ impl UserData {
     }
 }
 
-pub struct UserWorker {
-    rx: Receiver<UserThreadMsg>,
+pub struct UserWorker<'a> {
+    rx: &'a Receiver<UserThreadMsg>,
     directory: Directory,
     directory_entry: DirectoryEntry,
     channels: Vec<StoredChannel>,
     writer: Writer,
     state: State,
     modes: Vec<char>,
+    do_upgrade: bool,
 }
 
-impl UserWorker {
-    fn new(rx: Receiver<UserThreadMsg>, writer: Writer, directory: Directory, directory_entry: DirectoryEntry) -> Self {
+impl<'a> UserWorker<'a> {
+    fn new(rx: &'a Receiver<UserThreadMsg>, writer: Writer, directory: Directory, directory_entry: DirectoryEntry) -> Self {
         UserWorker{
             rx: rx,
             directory_entry: directory_entry,
@@ -86,33 +92,35 @@ impl UserWorker {
             writer: writer,
             state: State::NewConnection(None),
             channels: vec![],
-            modes: vec![]
+            modes: vec![],
+            do_upgrade: false,
         }
     }
 
-    fn run(&mut self) {
+    fn run(&mut self) -> bool {
         println!("user worker starting");
         loop {
             lselect_timeout!{
                 6 * 60 * 1000 => {
                     println!("Connection timed out");
-                    return;
+                    return self.do_upgrade;
                 },
                 msg = self.rx => {
                     match msg {
                         Ok(msg) => {
                             if self.handle_msg(msg) {
-                                return;
+                                return self.do_upgrade;
                             }
                         }
                         Err(e) => {
-                            println!("UserThread Got error: {:?}", e);
-                            return;
+                            println!("UserWorker Got error: {:?}", e);
+                            return self.do_upgrade;
                         }
                     }
                 },
             }
-        }
+        };
+        return self.do_upgrade;
     }
 
     fn handle_msg(&mut self, msg: UserThreadMsg) -> bool {
