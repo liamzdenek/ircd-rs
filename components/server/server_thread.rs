@@ -4,7 +4,7 @@ use std::thread;
 
 use channel_traits::{Directory};
 use user_traits::{UserThreadMsg};
-use net_traits::{Writer};
+use net_traits::{Writer,ParsedCommand};
 
 pub struct ServerWorker {
     rx: Receiver<UserThreadMsg>,
@@ -46,7 +46,31 @@ impl ServerWorker {
     }
     
     fn handle_msg(&mut self, msg: UserThreadMsg) -> bool {
-        println!("ServerWorker MSG: {:?}", msg);
+        return match msg {
+            UserThreadMsg::Command(cmd) => {
+                self.handle_command(cmd)
+            },
+            UserThreadMsg::JoinOther(..) |
+            UserThreadMsg::JoinSelf(..) |
+            UserThreadMsg::PartOther(..) |
+            UserThreadMsg::PartSelf(..) |
+            UserThreadMsg::TransmitNames(..) |
+            UserThreadMsg::GetMask(..) |
+            UserThreadMsg::Privmsg(..) |
+            UserThreadMsg::PrivmsgChan(..) => {
+                println!("ServerWorker cannot handle this msg: {:?}", msg);
+                false
+            },
+            UserThreadMsg::Exit => {
+                println!("ServerWorker exiting");
+                true
+            },
+        };
+    }
+
+    
+    fn handle_command(&mut self, mut cmd: ParsedCommand) -> bool{
+        println!("Got command: {:?}", cmd);
         return false;
     }
 }
