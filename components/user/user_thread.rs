@@ -6,18 +6,19 @@ use user_traits::*;
 use channel_traits::{Directory, DirectoryEntry, Channel, ChannelEntry};
 use channel_traits::error::Error as channel_traits_error;
 use server::ServerWorker;
+use server_traits::Config;
 
 pub trait UserThreadFactory {
-    fn new(w: Writer, directory: Directory) -> Self;
+    fn new(w: Writer, directory: Directory, config: Config) -> Self;
 }
 
 impl UserThreadFactory for UserThread {
-    fn new(w: Writer, directory: Directory) -> UserThread {
+    fn new(w: Writer, directory: Directory, config: Config) -> UserThread {
         let (tx,rx) = channel();
         let user = User::new(tx.clone());
         let entry = directory.new_user(user).unwrap();
         thread::Builder::new().name("UserThread".to_string()).spawn(move || {
-            let do_upgrade = UserWorker::new(&rx, w.clone(), directory.clone(), entry).run();
+            let do_upgrade = UserWorker::new(&rx, w.clone(), directory.clone(), entry, config).run();
             if do_upgrade {
                 // allow directory entry (var entry) to out of scope
                 ServerWorker::new(rx, w, directory).run();
@@ -76,6 +77,7 @@ pub struct UserWorker<'a> {
     rx: &'a Receiver<UserThreadMsg>,
     directory: Directory,
     directory_entry: DirectoryEntry,
+    config: Config,
     channels: Vec<StoredChannel>,
     writer: Writer,
     state: State,
@@ -84,12 +86,13 @@ pub struct UserWorker<'a> {
 }
 
 impl<'a> UserWorker<'a> {
-    fn new(rx: &'a Receiver<UserThreadMsg>, writer: Writer, directory: Directory, directory_entry: DirectoryEntry) -> Self {
+    fn new(rx: &'a Receiver<UserThreadMsg>, writer: Writer, directory: Directory, directory_entry: DirectoryEntry, config: Config) -> Self {
         UserWorker{
             rx: rx,
             directory_entry: directory_entry,
             directory: directory,
             writer: writer,
+            config: config,
             state: State::NewConnection(None),
             channels: vec![],
             modes: vec![],
@@ -204,8 +207,12 @@ impl<'a> UserWorker<'a> {
         match (self.state.clone(), cmd.command.to_uppercase().as_ref()) {
             // TODO: add PASSWD support
             (State::NewConnection(None), "PASS") => {
-                let guess = cmd.params.split_at(1).1.join(" ") + cmd.trailing.join(" ").as_ref();
-
+                let guess = cmd.params.join(" ") + cmd.trailing.join(" ").as_ref();
+                if self.config.get_server_pass() == guess {
+                    println!("User thread upgrading connection");
+                    self.do_upgrade = true;
+                }
+                return true;
             }
             (State::NewConnection(maybe_data), "NICK") |
             (State::NewConnection(maybe_data), "USER") => {

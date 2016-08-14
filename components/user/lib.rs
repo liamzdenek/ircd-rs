@@ -5,6 +5,7 @@ extern crate user_traits;
 extern crate net_traits;
 extern crate channel_traits;
 extern crate server;
+extern crate server_traits;
 
 pub mod user_thread;
 

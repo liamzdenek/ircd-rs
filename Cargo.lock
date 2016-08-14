@@ -106,6 +106,7 @@ dependencies = [
  "channel_traits 0.0.1",
  "net_traits 0.0.1",
  "server 0.0.1",
+ "server_traits 0.0.1",
  "user_traits 0.0.1",
  "util 0.0.1",
 ]
