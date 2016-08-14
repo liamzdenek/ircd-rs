@@ -8,8 +8,16 @@ use std::io::prelude::*;
 use std::fs::File;
 use serde_yaml;
 use std::str;
-use super::ConfigData;
 use std::collections::BTreeMap;
+
+#[derive(Debug, Deserialize)]
+pub struct ConfigData {
+    server_name: String,
+    client_bind_addr: String,
+    server_bind_addr: String,
+    server_pass: String,
+    server_desc: String,
+}
 
 pub fn parse_config(file: &Path) -> ConfigData {
     // TODO: not hardcode this
@@ -32,6 +40,7 @@ pub fn parse_config(file: &Path) -> ConfigData {
         client_bind_addr: data.get("client_bind_addr").unwrap().to_owned(),
         server_bind_addr: data.get("server_bind_addr").unwrap().to_owned(),
         server_pass: data.get("server_pass").unwrap().to_owned(),
+        server_desc: data.get("server_desc").unwrap().to_owned(),
     }
 }
 
@@ -88,6 +97,7 @@ impl ConfigWorker {
             ConfigThreadMsg::GetClientBindAddr(s) => s.send(self.data.client_bind_addr.clone()),
             ConfigThreadMsg::GetServerBindAddr(s) => s.send(self.data.server_bind_addr.clone()),
             ConfigThreadMsg::GetServerPass(s) => s.send(self.data.server_pass.clone()),
+            ConfigThreadMsg::GetServerDesc(s) => s.send(self.data.server_desc.clone()),
         };
         false
     }

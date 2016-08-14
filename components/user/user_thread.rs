@@ -19,10 +19,10 @@ impl UserThreadFactory for UserThread {
         let user = User::new(utx.clone());
         let entry = directory.new_user(user).unwrap();
         thread::Builder::new().name("UserThread".to_string()).spawn(move || {
-            let do_upgrade = UserWorker::new(urx, &rrx, w.clone(), directory.clone(), entry, config).run();
+            let do_upgrade = UserWorker::new(urx, &rrx, w.clone(), directory.clone(), entry, config.clone()).run();
             if do_upgrade {
                 // allow directory entry and user receiver (var entry, var urx) to out of scope
-                ServerWorker::new(rrx, w, directory).run();
+                ServerWorker::new(rrx, w, directory, config).run();
             }
         });
 

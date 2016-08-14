@@ -4,23 +4,34 @@ use std::thread;
 
 use channel_traits::{Directory};
 use net_traits::{Writer,ParsedCommand,ReaderThreadMsg,RPL};
+use server_traits::Config;
 
 pub struct ServerWorker {
     rx: Receiver<ReaderThreadMsg>,
     writer: Writer,
     directory: Directory,
+    config: Config,
 }
 impl ServerWorker {
-    pub fn new(rx: Receiver<ReaderThreadMsg>, writer: Writer, directory: Directory) -> Self {
+    pub fn new(rx: Receiver<ReaderThreadMsg>, writer: Writer, directory: Directory, config: Config) -> Self {
         ServerWorker{
             rx: rx,
             writer: writer,
             directory: directory,
+            config: config,
         }
     }
 
     pub fn run(&mut self) {
         println!("server worker starting");
+    
+        self.writer.write(RPL::Pass(self.config.get_server_pass()));
+        self.writer.write(RPL::Server(
+            self.config.get_server_name(),
+            1, // hops always 1 for self
+            self.config.get_server_desc(),
+        ));
+
         loop {
             lselect_timeout!{
                 6 * 60 * 1000 => {

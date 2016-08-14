@@ -33,7 +33,12 @@ impl LineFSM {
                     state = State::ParseCommand{line: line.into()}
                 },
                 State::ParsePrefix{line} => {
-                    unimplemented!{}
+                    let mut words = line.split(" ");
+                    
+                    prefix = Some(words.next().unwrap().into());
+                    let words: Vec<_> = words.collect();
+                    
+                    state = State::ParseCommand{line: words.join(" "),}
                 },
                 State::ParseCommand{line} => {
                     let mut iter = line.split_whitespace();

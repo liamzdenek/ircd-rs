@@ -1,5 +1,6 @@
 ---
-server_name: cuneiform
+server_name: cuneiform.myhub.net
 client_bind_addr: 0.0.0.0:3000
 server_bind_addr: 0.0.0.0:3001
 server_pass: hello world
+server_desc: I love lithography

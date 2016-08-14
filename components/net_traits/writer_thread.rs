@@ -81,6 +81,9 @@ pub enum RPL {
 
     NameReply(String, Vec<String>), // ChannelName, Names
     EndOfNames(String), // ChannelName
+
+    Pass(String), // password
+    Server(String, u32, String), // name, hops, desc
 }
 
 impl RPL {
@@ -176,6 +179,14 @@ impl RPL {
                 sname=servername,
                 nick=data.nick,
                 channel=channel,
+            ),
+            &RPL::Pass(ref pass) => format!("PASS :{pass}",
+                pass=pass
+            ),
+            &RPL::Server(ref name, ref hops, ref desc) => format!("SERVER {name} {hops} :{desc}",
+                name=name,
+                hops=hops,
+                desc=desc,
             ),
         }
     }
