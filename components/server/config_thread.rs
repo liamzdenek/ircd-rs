@@ -31,6 +31,7 @@ pub fn parse_config(file: &Path) -> ConfigData {
         server_name: data.get("server_name").unwrap().to_owned(),
         client_bind_addr: data.get("client_bind_addr").unwrap().to_owned(),
         server_bind_addr: data.get("server_bind_addr").unwrap().to_owned(),
+        server_pass: data.get("server_pass").unwrap().to_owned(),
     }
 }
 
@@ -86,6 +87,7 @@ impl ConfigWorker {
             ConfigThreadMsg::GetServerName(s) => s.send(self.data.server_name.clone()),
             ConfigThreadMsg::GetClientBindAddr(s) => s.send(self.data.client_bind_addr.clone()),
             ConfigThreadMsg::GetServerBindAddr(s) => s.send(self.data.server_bind_addr.clone()),
+            ConfigThreadMsg::GetServerPass(s) => s.send(self.data.server_pass.clone()),
         };
         false
     }

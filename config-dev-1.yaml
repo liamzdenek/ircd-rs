@@ -2,3 +2,4 @@
 server_name: cuneiform
 client_bind_addr: 0.0.0.0:3000
 server_bind_addr: 0.0.0.0:3001
+server_pass: hello world

@@ -203,6 +203,10 @@ impl<'a> UserWorker<'a> {
         //TODO: handle htis better so that self.state is not cloned
         match (self.state.clone(), cmd.command.to_uppercase().as_ref()) {
             // TODO: add PASSWD support
+            (State::NewConnection(None), "PASS") => {
+                let guess = cmd.params.split_at(1).1.join(" ") + cmd.trailing.join(" ").as_ref();
+
+            }
             (State::NewConnection(maybe_data), "NICK") |
             (State::NewConnection(maybe_data), "USER") => {
                 let mut data = maybe_data.unwrap_or(Default::default());

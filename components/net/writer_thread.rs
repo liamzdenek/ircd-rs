@@ -62,7 +62,7 @@ impl WriterWorker {
                 self.stream.write(raw.into_bytes().as_slice());
             },
             WriterThreadMsg::Send(rpl) => {
-                self.data.server_name = self.config.get_server_name().unwrap();
+                self.data.server_name = self.config.get_server_name();
                 let raw = rpl.raw(&mut self.data);
                 println!(">> {} -- from {:?}", raw, rpl);
                 self.stream.write(format!("{}\r\n", raw).into_bytes().as_slice());

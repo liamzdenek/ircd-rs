@@ -24,7 +24,7 @@ use server_traits::Config;
 
 pub fn run(directory: Directory, config: Config) {
     println!("hello world");
-    let listener = TcpListener::bind(config.get_client_bind_addr().unwrap().as_str()).unwrap();
+    let listener = TcpListener::bind(config.get_client_bind_addr().as_str()).unwrap();
 
     for stream in listener.incoming() {
         match stream {

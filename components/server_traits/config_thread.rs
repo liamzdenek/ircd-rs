@@ -8,6 +8,7 @@ pub enum ConfigThreadMsg {
     GetServerName(Sender<String>),
     GetClientBindAddr(Sender<String>),
     GetServerBindAddr(Sender<String>),
+    GetServerPass(Sender<String>),
 }
 
 #[derive(Clone)]
@@ -20,15 +21,19 @@ impl Config {
         Config{ thread: thread }
     }
 
-    pub fn get_server_name(&self) -> Result<String> {
-        Ok(try!(req_rep!(self.thread, ConfigThreadMsg::GetServerName => ())))
+    pub fn get_server_name(&self) -> String {
+        req_rep!(self.thread, ConfigThreadMsg::GetServerName => ()).unwrap()
     }
 
-    pub fn get_client_bind_addr(&self) -> Result<String> {
-        Ok(try!(req_rep!(self.thread, ConfigThreadMsg::GetClientBindAddr => ())))
+    pub fn get_client_bind_addr(&self) -> String{
+       req_rep!(self.thread, ConfigThreadMsg::GetClientBindAddr => ()).unwrap()
     }
 
-    pub fn get_server_bind_addr(&self) -> Result<String> {
-        Ok(try!(req_rep!(self.thread, ConfigThreadMsg::GetServerBindAddr => ())))
+    pub fn get_server_bind_addr(&self) -> String {
+        req_rep!(self.thread, ConfigThreadMsg::GetServerBindAddr => ()).unwrap()
+    }
+
+    pub fn get_server_pass(&self) -> String {
+        req_rep!(self.thread, ConfigThreadMsg::GetServerPass => ()).unwrap()
     }
 }

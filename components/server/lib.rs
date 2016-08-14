@@ -17,6 +17,7 @@ pub struct ConfigData {
     server_name: String,
     client_bind_addr: String,
     server_bind_addr: String,
+    server_pass: String,
 }
 
 pub mod server_thread;
