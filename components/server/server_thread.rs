@@ -3,7 +3,7 @@ use std::net::TcpStream;
 use std::thread;
 
 use channel_traits::{Directory};
-use net_traits::{Writer,ParsedCommand,ReaderThreadMsg};
+use net_traits::{Writer,ParsedCommand,ReaderThreadMsg,RPL};
 
 pub struct ServerWorker {
     rx: Receiver<ReaderThreadMsg>,
@@ -55,6 +55,14 @@ impl ServerWorker {
     
     fn handle_command(&mut self, mut cmd: ParsedCommand) -> bool{
         println!("Got command: {:?}", cmd);
+        match cmd.command.to_uppercase().as_str() {
+            "PING" => {
+                self.writer.write(RPL::Pong(cmd.params.clone().join(" ")));
+            },
+            _ => {
+                println!("I don't know how to handle cmd: {:?}", cmd);
+            }
+        }
         return false;
     }
 }

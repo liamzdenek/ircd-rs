@@ -269,7 +269,7 @@ impl<'a> UserWorker<'a> {
                 }
             },
             (_, "PING") => {
-                self.writer.write(RPL::Pong(cmd.params[0].clone()));
+                self.writer.write(RPL::Pong(cmd.params.clone().join(" ")));
             },
             (State::Connected{data}, "MODE") => {
                 // TODO: should send back a list of the modes affecting a user or channel
