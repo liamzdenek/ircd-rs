@@ -3,16 +3,15 @@ use std::net::TcpStream;
 use std::thread;
 
 use channel_traits::{Directory};
-use user_traits::{UserThreadMsg};
-use net_traits::{Writer,ParsedCommand};
+use net_traits::{Writer,ParsedCommand,ReaderThreadMsg};
 
 pub struct ServerWorker {
-    rx: Receiver<UserThreadMsg>,
+    rx: Receiver<ReaderThreadMsg>,
     writer: Writer,
     directory: Directory,
 }
 impl ServerWorker {
-    pub fn new(rx: Receiver<UserThreadMsg>, writer: Writer, directory: Directory) -> Self {
+    pub fn new(rx: Receiver<ReaderThreadMsg>, writer: Writer, directory: Directory) -> Self {
         ServerWorker{
             rx: rx,
             writer: writer,
@@ -45,25 +44,10 @@ impl ServerWorker {
         };
     }
     
-    fn handle_msg(&mut self, msg: UserThreadMsg) -> bool {
+    fn handle_msg(&mut self, msg: ReaderThreadMsg) -> bool {
         return match msg {
-            UserThreadMsg::Command(cmd) => {
+            ReaderThreadMsg::Command(cmd) => {
                 self.handle_command(cmd)
-            },
-            UserThreadMsg::JoinOther(..) |
-            UserThreadMsg::JoinSelf(..) |
-            UserThreadMsg::PartOther(..) |
-            UserThreadMsg::PartSelf(..) |
-            UserThreadMsg::TransmitNames(..) |
-            UserThreadMsg::GetMask(..) |
-            UserThreadMsg::Privmsg(..) |
-            UserThreadMsg::PrivmsgChan(..) => {
-                println!("ServerWorker cannot handle this msg: {:?}", msg);
-                false
-            },
-            UserThreadMsg::Exit => {
-                println!("ServerWorker exiting");
-                true
             },
         };
     }

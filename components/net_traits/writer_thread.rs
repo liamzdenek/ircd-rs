@@ -1,7 +1,14 @@
 use std::sync::mpsc::{channel, Sender};
 use util::*;
 use super::Result;
- 
+use super::ParsedCommand;
+
+pub type ReaderThread = Sender<ReaderThreadMsg>;
+
+pub enum ReaderThreadMsg {
+    Command(ParsedCommand)
+}
+
 pub type WriterThread = Sender<WriterThreadMsg>;
 
 #[derive(Debug)]

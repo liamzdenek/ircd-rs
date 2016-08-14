@@ -30,11 +30,12 @@ impl User {
     pub fn run(&mut self) -> Result<()>{
         let mut fsm = LineFSM::new();
         let writer = Writer::new(WriterThreadFactory::new(self.stream.try_clone().unwrap(), self.config.clone()));
-        let user = TUser::new(UserThreadFactory::new(writer, self.directory.clone(), self.config.clone()));
+        let (user, reader_tx)  =UserThreadFactory::new(writer, self.directory.clone(), self.config.clone());
+        let user = TUser::new(user);
         loop {
             let line = try!(self.read_line());
             let cmd = try!(fsm.handle_line(line));
-            match user.send_command(cmd) {
+            match send!(reader_tx, ReaderThreadMsg::Command => (cmd)) {
                 Err(e) => {
                     println!("error: {:?}", e);
                     return Err(Error::UserError);

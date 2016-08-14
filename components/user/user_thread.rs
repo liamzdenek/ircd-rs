@@ -1,7 +1,7 @@
 use std::sync::mpsc::{channel, Receiver};
 use std::thread;
 
-use net_traits::{Writer, ParsedCommand, RPL};
+use net_traits::{Writer, ParsedCommand, RPL, ReaderThread, ReaderThreadMsg};
 use user_traits::*;
 use channel_traits::{Directory, DirectoryEntry, Channel, ChannelEntry};
 use channel_traits::error::Error as channel_traits_error;
@@ -9,23 +9,24 @@ use server::ServerWorker;
 use server_traits::Config;
 
 pub trait UserThreadFactory {
-    fn new(w: Writer, directory: Directory, config: Config) -> Self;
+    fn new(w: Writer, directory: Directory, config: Config) -> (Self, ReaderThread);
 }
 
 impl UserThreadFactory for UserThread {
-    fn new(w: Writer, directory: Directory, config: Config) -> UserThread {
-        let (tx,rx) = channel();
-        let user = User::new(tx.clone());
+    fn new(w: Writer, directory: Directory, config: Config) -> (UserThread, ReaderThread) {
+        let (utx,urx) = channel();
+        let (rtx,rrx) = channel();
+        let user = User::new(utx.clone());
         let entry = directory.new_user(user).unwrap();
         thread::Builder::new().name("UserThread".to_string()).spawn(move || {
-            let do_upgrade = UserWorker::new(&rx, w.clone(), directory.clone(), entry, config).run();
+            let do_upgrade = UserWorker::new(urx, &rrx, w.clone(), directory.clone(), entry, config).run();
             if do_upgrade {
-                // allow directory entry (var entry) to out of scope
-                ServerWorker::new(rx, w, directory).run();
+                // allow directory entry and user receiver (var entry, var urx) to out of scope
+                ServerWorker::new(rrx, w, directory).run();
             }
         });
 
-        tx
+        (utx, rtx)
     }
 }
 
@@ -74,7 +75,8 @@ impl UserData {
 }
 
 pub struct UserWorker<'a> {
-    rx: &'a Receiver<UserThreadMsg>,
+    urx: Receiver<UserThreadMsg>,
+    rrx: &'a Receiver<ReaderThreadMsg>,
     directory: Directory,
     directory_entry: DirectoryEntry,
     config: Config,
@@ -86,9 +88,10 @@ pub struct UserWorker<'a> {
 }
 
 impl<'a> UserWorker<'a> {
-    fn new(rx: &'a Receiver<UserThreadMsg>, writer: Writer, directory: Directory, directory_entry: DirectoryEntry, config: Config) -> Self {
+    fn new(urx: Receiver<UserThreadMsg>, rrx: &'a Receiver<ReaderThreadMsg>, writer: Writer, directory: Directory, directory_entry: DirectoryEntry, config: Config) -> Self {
         UserWorker{
-            rx: rx,
+            urx: urx,
+            rrx: rrx,
             directory_entry: directory_entry,
             directory: directory,
             writer: writer,
@@ -108,10 +111,10 @@ impl<'a> UserWorker<'a> {
                     println!("Connection timed out");
                     return self.do_upgrade;
                 },
-                msg = self.rx => {
+                msg = self.urx => {
                     match msg {
                         Ok(msg) => {
-                            if self.handle_msg(msg) {
+                            if self.handle_user_msg(msg) {
                                 return self.do_upgrade;
                             }
                         }
@@ -121,17 +124,35 @@ impl<'a> UserWorker<'a> {
                         }
                     }
                 },
+                msg = self.rrx => {
+                    match msg {
+                        Ok(msg) => {
+                            if self.handle_reader_msg(msg) {
+                                return self.do_upgrade;
+                            }
+                        }
+                        Err(e) => {
+                            println!("UserWorker Got Error: {:?}", e);
+                            return self.do_upgrade;
+                        }
+                    }
+                },
             }
         };
         return self.do_upgrade;
     }
 
-    fn handle_msg(&mut self, msg: UserThreadMsg) -> bool {
-        //println!("got msg: {:?}", msg);
+    fn handle_reader_msg(&mut self, msg: ReaderThreadMsg) -> bool {
         return match msg {
-            UserThreadMsg::Command(cmd) => {
+            ReaderThreadMsg::Command(cmd) => {
                 self.handle_command(cmd)
             },
+        }
+    }
+
+    fn handle_user_msg(&mut self, msg: UserThreadMsg) -> bool {
+        //println!("got msg: {:?}", msg);
+        return match msg {
             UserThreadMsg::JoinOther(mask, chan_name) => {
                 self.writer.write(RPL::Join(mask, chan_name));
                 false
