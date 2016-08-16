@@ -57,6 +57,8 @@ impl ServerWorker {
             1, // hops always 1 for self
             self.config.get_server_desc(),
         ));
+        
+        self.writer.swrite(SRPL::EOS);
         loop {
             lselect_timeout!{
                 6 * 60 * 1000 => {

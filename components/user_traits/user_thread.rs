@@ -1,6 +1,4 @@
 use std::sync::mpsc::{channel, Sender};
-use util::*;
-use net_traits::ParsedCommand;
 use super::Result;
 
 pub type UserThread = Sender<UserThreadMsg>;

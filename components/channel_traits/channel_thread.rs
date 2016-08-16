@@ -1,9 +1,7 @@
 use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
-use util::*;
 use super::Result;
 use user_traits::User;
-use std::borrow::BorrowMut;
 use std::sync::RwLock;
 
 pub type ChannelThread = Sender<ChannelThreadMsg>;

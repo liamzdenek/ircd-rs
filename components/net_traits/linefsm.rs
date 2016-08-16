@@ -1,5 +1,4 @@
 use std::string::String;
-use error::*;
 
 #[derive(Debug)]
 pub struct ParsedCommand {

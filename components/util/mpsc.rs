@@ -61,7 +61,7 @@ macro_rules! send {
     ($sender:expr, $path:path => ( $($arg:expr),* )) => {{
         let data = $path($($arg),*);
         $sender.send(data)
-            .map_err(|e| {
+            .map_err(|_e| { // todo: do something intelligent with this arg
                 $crate::ChanError::SendError(stringify!($path))
             })
     }}
@@ -72,9 +72,8 @@ macro_rules! req_rep {
     ($sender:expr, $path:path => ( $($arg:expr),* )) => {{
         let (tx, rx) = channel();
         let data = $path(tx, $($arg),*);
-        let path_str = stringify!($path);
         let ret = $sender.send(data)
-            .map_err(|_e| {
+            .map_err(|_e| { // todo: do something intelligent with this arg
                 $crate::ChanError::SendError(stringify!($path))
             });
         let finalres: ::std::result::Result<_, $crate::ChanError>;

@@ -13,29 +13,34 @@ pub enum TimerEvents {
     Emit,
 }
 
+// TODO: figure out why erx is generating a dead code warning, it definitely is in use
+// i think macros might be confusing the compiler, unsure
+#[allow(dead_code)]
 pub struct Timer {
     erx: Receiver<TimerEvents>,
 }
 
+#[allow(dead_code)]
 pub struct TimerController {
     ctx: Sender<TimerMsgs>,
 }
 
 impl Timer {
-    fn new() -> (Self,TimerController) {
+    pub fn new() -> (Self,TimerController) {
         let(ctx, crx) = channel(); // control tx/rx
         let(etx, erx) = channel(); // event tx/rx
 
         thread::Builder::new().name("TimerThread".to_string()).spawn(move || {
             TimerManager::new(etx,crx).start();
-        });
+        }).unwrap();
 
-        (Timer{
+        let timer = Timer{
             erx: erx,
-        },
-        TimerController{
+        };
+        let timercontroller = TimerController{
             ctx: ctx,
-        })
+        };
+        (timer, timercontroller)
     }
 }
 
@@ -70,13 +75,13 @@ impl TimerManager {
         match msg {
             TimerMsgs::EmitOnce(duration) => {
                 thread::sleep(duration);
-                self.etx.send(TimerEvents::Emit);
+                self.etx.send(TimerEvents::Emit).unwrap();
                 false
             }
             TimerMsgs::EmitFinite(duration, count) => {
                 for _ in 0..count {
                     thread::sleep(duration);
-                    self.etx.send(TimerEvents::Emit);
+                    self.etx.send(TimerEvents::Emit).unwrap();
                     if self.check() { return false; }
                 }
                 false
@@ -84,10 +89,10 @@ impl TimerManager {
             TimerMsgs::EmitForever(duration) => {
                 loop {
                     thread::sleep(duration);
-                    self.etx.send(TimerEvents::Emit);
+                    self.etx.send(TimerEvents::Emit).unwrap();
                     if self.check() { return false; }
                 }
-                false
+                // unreachable!{};
             }
             TimerMsgs::Exit => {
                 true

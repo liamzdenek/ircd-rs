@@ -1,6 +1,5 @@
 use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
-use util::*;
 use super::Result;
 use super::Channel;
 use user_traits::User;

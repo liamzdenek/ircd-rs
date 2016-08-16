@@ -1,5 +1,5 @@
 ---
-server_name: cuneiform.myhub.net
+server_name: cuneiform.mynet.org
 client_bind_addr: 0.0.0.0:3000
 server_bind_addr: 0.0.0.0:3001
 server_pass: hello world

@@ -1,5 +1,4 @@
-use std::sync::mpsc::{channel, Sender};
-use util::*;
+use std::sync::mpsc::{Sender};
 use super::Result;
 use super::ParsedCommand;
 
@@ -63,6 +62,7 @@ pub enum SRPL {
     Pass(String), // password
     Server(String, u32, String), // name, hops, desc
     ProtoCtl(Vec<ProtoOption>),
+    EOS,
 }
 
 #[derive(Debug)]
@@ -121,9 +121,11 @@ impl SRPL {
                 let str = opts.iter().map(|opt| opt.raw()).collect::<Vec<_>>().join(" ");
                 format!("PROTOCTL {opts}", opts = str)
             },
+            &SRPL::EOS => "EOS".into(),
         }
     }
 }
+
 
 #[derive(Debug)]
 pub enum RPL {
