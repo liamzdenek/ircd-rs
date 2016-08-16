@@ -15,6 +15,7 @@ pub type WriterThread = Sender<WriterThreadMsg>;
 pub enum WriterThreadMsg {
     SendRaw(String),
     Send(RPL),
+    SSend(SRPL),
     UpdateNick(String),
 }
 
@@ -38,6 +39,11 @@ impl Writer {
         Ok(())
     }
 
+    pub fn swrite(&self, msg: SRPL) -> Result<()> {
+        try!(send!(self.thread, WriterThreadMsg::SSend => (msg)));
+        Ok(())
+    }
+
     pub fn update_nick(&self, nick: String) -> Result<()> {
         try!(send!(self.thread, WriterThreadMsg::UpdateNick => (nick)));
         Ok(())
@@ -49,6 +55,74 @@ pub struct WriterData {
     pub nick: String,
     pub cur_chan: String,
     pub server_name: String,
+}
+
+#[derive(Debug)]
+pub enum SRPL {
+    Pong(String), //msg
+    Pass(String), // password
+    Server(String, u32, String), // name, hops, desc
+    ProtoCtl(Vec<ProtoOption>),
+}
+
+#[derive(Debug)]
+pub enum ProtoOption {
+    EAUTH(String), // server name
+    SID(String), // server id
+    NOQUIT,
+    NICKv2,
+    SJOIN,
+    SJ3,
+    CLK,
+    NICKIP,
+    TKLEXT,
+    TKLEXT2,
+    ESVID,
+    MLOCK,
+    EXTSWHOIS,
+}
+
+impl ProtoOption {
+    pub fn raw(&self) -> String {
+        use ProtoOption::*;
+        match self {
+            &EAUTH(ref server_name) => format!("EAUTH={}", server_name),
+            &SID(ref server_id) => format!("SID={}",server_id),
+            &NOQUIT => "NOQUIT".into(),
+            &NICKv2 => "NICKv2".into(),
+            &SJOIN => "SJOIN".into(),
+            &SJ3 => "SJ3".into(), 
+            &CLK => "CLK".into(),
+            &NICKIP => "NICKIP".into(),
+            &TKLEXT => "TKLEXT".into(),
+            &TKLEXT2 => "TKLEXT2".into(),
+            &ESVID => "ESVID".into(),
+            &MLOCK => "MLOCK".into(),
+            &EXTSWHOIS => "EXTSWHOIS".into(),
+        }.into()
+    }
+}
+
+impl SRPL {
+    pub fn raw(&self, data: &mut WriterData) -> String {
+        match self {
+            &SRPL::Pass(ref pass) => format!("PASS :{pass}",
+                pass=pass
+            ),
+            &SRPL::Server(ref name, ref hops, ref desc) => format!("SERVER {name} {hops} :{desc}",
+                name=name,
+                hops=hops,
+                desc=desc,
+            ),
+            &SRPL::Pong(ref msg) => format!("PONG :{msg}",
+                msg = msg,
+            ),
+            &SRPL::ProtoCtl(ref opts) => {
+                let str = opts.iter().map(|opt| opt.raw()).collect::<Vec<_>>().join(" ");
+                format!("PROTOCTL {opts}", opts = str)
+            },
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -81,9 +155,6 @@ pub enum RPL {
 
     NameReply(String, Vec<String>), // ChannelName, Names
     EndOfNames(String), // ChannelName
-
-    Pass(String), // password
-    Server(String, u32, String), // name, hops, desc
 }
 
 impl RPL {
@@ -179,14 +250,6 @@ impl RPL {
                 sname=servername,
                 nick=data.nick,
                 channel=channel,
-            ),
-            &RPL::Pass(ref pass) => format!("PASS :{pass}",
-                pass=pass
-            ),
-            &RPL::Server(ref name, ref hops, ref desc) => format!("SERVER {name} {hops} :{desc}",
-                name=name,
-                hops=hops,
-                desc=desc,
             ),
         }
     }

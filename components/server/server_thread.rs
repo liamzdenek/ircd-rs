@@ -3,14 +3,19 @@ use std::net::TcpStream;
 use std::thread;
 
 use channel_traits::{Directory};
-use net_traits::{Writer,ParsedCommand,ReaderThreadMsg,RPL};
+use net_traits::{Writer,ParsedCommand,ReaderThreadMsg,SRPL};
 use server_traits::Config;
+
+enum State {
+    Sync,
+}
 
 pub struct ServerWorker {
     rx: Receiver<ReaderThreadMsg>,
     writer: Writer,
     directory: Directory,
     config: Config,
+    state: State,
 }
 impl ServerWorker {
     pub fn new(rx: Receiver<ReaderThreadMsg>, writer: Writer, directory: Directory, config: Config) -> Self {
@@ -19,23 +24,43 @@ impl ServerWorker {
             writer: writer,
             directory: directory,
             config: config,
+            state: State::Sync,
         }
     }
 
     pub fn run(&mut self) {
-        println!("server worker starting");
+        lprintln!("server worker starting");
     
-        self.writer.write(RPL::Pass(self.config.get_server_pass()));
-        self.writer.write(RPL::Server(
+        self.writer.swrite(SRPL::Pass(self.config.get_server_pass()));
+
+        {
+            use net_traits::ProtoOption::*;
+            self.writer.swrite(SRPL::ProtoCtl(vec![
+                EAUTH(self.config.get_server_name()),
+                //SID( ... TODO: this),
+                NOQUIT,
+                NICKv2,
+                SJOIN,
+                SJ3,
+                CLK,
+                NICKIP,
+                TKLEXT,
+                TKLEXT2,
+                ESVID,
+                MLOCK,
+                EXTSWHOIS,
+            ]));
+        }
+        
+        self.writer.swrite(SRPL::Server(
             self.config.get_server_name(),
             1, // hops always 1 for self
             self.config.get_server_desc(),
         ));
-
         loop {
             lselect_timeout!{
                 6 * 60 * 1000 => {
-                    println!("Connection timed out");
+                    lprintln!("Connection timed out");
                     return;
                 },
                 msg = self.rx => {
@@ -46,7 +71,7 @@ impl ServerWorker {
                             }
                         }
                         Err(e) => {
-                            println!("ServerWorker Got error: {:?}", e);
+                            lprintln!("ServerWorker Got error: {:?}", e);
                             return;
                         }
                     }
@@ -65,13 +90,14 @@ impl ServerWorker {
 
     
     fn handle_command(&mut self, mut cmd: ParsedCommand) -> bool{
-        println!("Got command: {:?}", cmd);
-        match cmd.command.to_uppercase().as_str() {
-            "PING" => {
-                self.writer.write(RPL::Pong(cmd.params.clone().join(" ")));
+        lprintln!("Got command: {:?}", cmd);
+        match (&self.state, cmd.command.to_uppercase().as_str()) {
+            
+            (_, "PING") => {
+                self.writer.swrite(SRPL::Pong(cmd.params.clone().join(" ")));
             },
             _ => {
-                println!("I don't know how to handle cmd: {:?}", cmd);
+                lprintln!("I don't know how to handle cmd: {:?}", cmd);
             }
         }
         return false;

@@ -23,7 +23,7 @@ use user::User;
 use server_traits::Config;
 
 pub fn run(directory: Directory, config: Config) {
-    println!("hello world");
+    lprintln!("hello world");
     let listener = TcpListener::bind(config.get_client_bind_addr().as_str()).unwrap();
 
     for stream in listener.incoming() {
@@ -32,9 +32,9 @@ pub fn run(directory: Directory, config: Config) {
             Ok(stream) => {
                 let directory_clone = directory.clone();
                 let config_clone = config.clone();
-                thread::spawn(move|| {
+                thread::Builder::new().name("ReaderThread".to_string()).spawn(move|| {
                     let err = User::new(stream, config_clone, directory_clone).run();
-                    println!("Connection ended with err: {:?}", err);
+                    lprintln!("Connection ended with err: {:?}", err);
                 });
             }
         }

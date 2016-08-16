@@ -37,7 +37,7 @@ impl User {
             let cmd = try!(fsm.handle_line(line));
             match send!(reader_tx, ReaderThreadMsg::Command => (cmd)) {
                 Err(e) => {
-                    println!("error: {:?}", e);
+                    lprintln!("error: {:?}", e);
                     return Err(Error::UserError);
                 }
                 _ => {}

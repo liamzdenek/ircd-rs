@@ -56,7 +56,7 @@ impl DirectoryEntry {
 
 impl Drop for StoredDirectoryId {
     fn drop(&mut self) {
-        println!("Dropping Directory ID -- {:?}", self.id);
+        lprintln!("Dropping Directory ID -- {:?}", self.id);
         // we're about to wipe out the last reference, inform directory thread of its destruction
         self.directory.destroy_user(self.id).unwrap();
     }
@@ -75,7 +75,7 @@ impl Directory {
     pub fn new_user(&self, user: User) -> Result<DirectoryEntry> {
         unsafe{
             let id = try!(req_rep!(self.thread, DirectoryThreadMsg::NewUser => (user)));
-            println!("User got id: {:?}", id);
+            lprintln!("User got id: {:?}", id);
             Ok(DirectoryEntry::new(self.clone(), id))
         }
     }

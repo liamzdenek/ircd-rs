@@ -26,14 +26,14 @@ pub fn parse_config(file: &Path) -> ConfigData {
 
     f.read_to_end(&mut buffer).unwrap();
 
-    println!("Read file: {:?}", buffer);
+    lprintln!("Read file: {:?}", buffer);
 
     // custom derive deserialize seems to be broken, TODO: make that work
     let mut data: BTreeMap<String, String> = BTreeMap::new();
 
 
     data = serde_yaml::from_str(str::from_utf8(&buffer).unwrap()).unwrap();
-    println!("Data: {:?}", data);
+    lprintln!("Data: {:?}", data);
 
     ConfigData{
         server_name: data.get("server_name").unwrap().to_owned(),
@@ -82,7 +82,7 @@ impl ConfigWorker {
                             }
                         },
                         Err(e) => {
-                            println!("UserThread Got error: {:?}", e);
+                            lprintln!("UserThread Got error: {:?}", e);
                             return;
                         }
                     }

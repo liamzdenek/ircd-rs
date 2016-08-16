@@ -62,7 +62,7 @@ impl DirectoryWorker {
                             }
                         }
                         Err(e) => {
-                            println!("DirectoryThread Got error: {:?}", e);
+                            lprintln!("DirectoryThread Got error: {:?}", e);
                         }
                     }
                 },
@@ -71,7 +71,7 @@ impl DirectoryWorker {
     }
 
     fn handle_msg(&mut self, msg: DirectoryThreadMsg) -> bool{
-        println!("Directory Thread got msg: {:?}", msg);
+        lprintln!("Directory Thread got msg: {:?}", msg);
         match msg {
             DirectoryThreadMsg::GetChannels(s) => {
 
@@ -130,9 +130,9 @@ impl DirectoryWorker {
                     }
                     _ => {}
                 }
-                println!("=========================");
-                println!("unregistering user: {:?}", nick);
-                println!("=========================");
+                lprintln!("=========================");
+                lprintln!("unregistering user: {:?}", nick);
+                lprintln!("=========================");
                 match nick {
                     Some(nick) => {
                         self.users_by_nick.remove(&nick);
@@ -142,20 +142,20 @@ impl DirectoryWorker {
                 self.users[id as usize] = None;
             },
             DirectoryThreadMsg::UpdateNick(s,id,nick) => {
-                println!("Updating nick: {:?} |||||| {:?} |||||| {:?}", nick, self.users, self.users_by_nick);
+                lprintln!("Updating nick: {:?} |||||| {:?} |||||| {:?}", nick, self.users, self.users_by_nick);
                 let nick_in_use = {
                     match self.users_by_nick.get(&nick) {
                         Some(user) => {
-                            println!("UpdateNick Got user: {:?}", user);
+                            lprintln!("UpdateNick Got user: {:?}", user);
                             true
                             /*
                             match user.upgrade() {
                                 Some(user) => {
-                                    println!("Upgraded");
+                                    lprintln!("Upgraded");
                                     true
                                 }
                                 None => {
-                                    println!("Not Upgraded");
+                                    lprintln!("Not Upgraded");
                                     false
                                 }
                             }*/
@@ -164,7 +164,7 @@ impl DirectoryWorker {
                     }
                 };
                 if nick_in_use {
-                    println!("Nick in use");
+                    lprintln!("Nick in use");
                     s.send(Err(Error::NickCollision));
                     return false;
                 }
@@ -175,7 +175,7 @@ impl DirectoryWorker {
                             tuser.nick = nick.clone().into();
                         }
                         self.users_by_nick.insert(nick.clone(), user.clone());//Rc::downgrade(user));
-                        //println!("ATTEMT IMMEDIATE UPGRADE: {:?}", self.users_by_nick.get(&nick).unwrap().upgrade());
+                        //lprintln!("ATTEMT IMMEDIATE UPGRADE: {:?}", self.users_by_nick.get(&nick).unwrap().upgrade());
                     }
                     _ => {}
                 }

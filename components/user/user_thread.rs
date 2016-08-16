@@ -104,11 +104,11 @@ impl<'a> UserWorker<'a> {
     }
 
     fn run(&mut self) -> bool {
-        println!("user worker starting");
+        lprintln!("user worker starting");
         loop {
             lselect_timeout!{
                 6 * 60 * 1000 => {
-                    println!("Connection timed out");
+                    lprintln!("Connection timed out");
                     return self.do_upgrade;
                 },
                 msg = self.urx => {
@@ -119,7 +119,7 @@ impl<'a> UserWorker<'a> {
                             }
                         }
                         Err(e) => {
-                            println!("UserWorker Got error: {:?}", e);
+                            lprintln!("UserWorker Got error: {:?}", e);
                             return self.do_upgrade;
                         }
                     }
@@ -132,7 +132,7 @@ impl<'a> UserWorker<'a> {
                             }
                         }
                         Err(e) => {
-                            println!("UserWorker Got Error: {:?}", e);
+                            lprintln!("UserWorker Got Error: {:?}", e);
                             return self.do_upgrade;
                         }
                     }
@@ -151,7 +151,7 @@ impl<'a> UserWorker<'a> {
     }
 
     fn handle_user_msg(&mut self, msg: UserThreadMsg) -> bool {
-        //println!("got msg: {:?}", msg);
+        //lprintln!("got msg: {:?}", msg);
         return match msg {
             UserThreadMsg::JoinOther(mask, chan_name) => {
                 self.writer.write(RPL::Join(mask, chan_name));
@@ -163,7 +163,7 @@ impl<'a> UserWorker<'a> {
                         self.writer.write(RPL::Join(data.gen_mask().for_privmsg(), chan_name));
                     }
                     st => {
-                        println!("Cannot JOIN with state: {:?}", st);
+                        lprintln!("Cannot JOIN with state: {:?}", st);
                     }
                 };
                 false
@@ -179,7 +179,7 @@ impl<'a> UserWorker<'a> {
                         true
                     }
                     st => {
-                        println!("Cannot JOIN with state: {:?}", st);
+                        lprintln!("Cannot JOIN with state: {:?}", st);
                         false
                     }
                 };
@@ -209,12 +209,12 @@ impl<'a> UserWorker<'a> {
                 false
             },
             UserThreadMsg::Privmsg(src, msg) => {
-                //println!("Received Privmsg -- <{}> {}", src, msg);
+                //lprintln!("Received Privmsg -- <{}> {}", src, msg);
                 self.writer.write(RPL::Privmsg(src, msg));
                 false
             },
             UserThreadMsg::PrivmsgChan(src, chan, msg) => {
-                //println!("Received Privmsg -- <{}> {}", src, msg);
+                //lprintln!("Received Privmsg -- <{}> {}", src, msg);
                 self.writer.write(RPL::PrivmsgChan(src, chan, msg));
                 false
             },
@@ -230,7 +230,7 @@ impl<'a> UserWorker<'a> {
             (State::NewConnection(None), "PASS") => {
                 let guess = cmd.params.join(" ") + cmd.trailing.join(" ").as_ref();
                 if self.config.get_server_pass() == guess {
-                    println!("User thread upgrading connection");
+                    lprintln!("User thread upgrading connection");
                     self.do_upgrade = true;
                 }
                 return true;
@@ -239,24 +239,24 @@ impl<'a> UserWorker<'a> {
             (State::NewConnection(maybe_data), "USER") => {
                 let mut data = maybe_data.unwrap_or(Default::default());
                 data.apply(cmd);
-                println!("checking is ready {:?}", data);
+                lprintln!("checking is ready {:?}", data);
                 self.state = if data.is_ready() {
-                    println!("== Connected");
+                    lprintln!("== Connected");
                     self.writer.update_nick(data.nick.clone());
                     let has_collisions = self.directory_entry.update_nick(data.nick.clone());
-                    println!("GOT BACK: {:?}", has_collisions);
+                    lprintln!("GOT BACK: {:?}", has_collisions);
                     match has_collisions {
                         Ok(_) => {
-                            println!("Nick has no collisions, good to continue");
+                            lprintln!("Nick has no collisions, good to continue");
                         }
                         Err(channel_traits_error::NickCollision) => {
-                            println!("Nick has collisions, cannot continue");
+                            lprintln!("Nick has collisions, cannot continue");
                             self.writer.write(RPL::NickInUse);
                             self.state = State::NewConnection(Some(data));
                             return false;
                         }
                         Err(e) => {
-                            println!("Internal error determining if nick has collisions: {:?}", e);
+                            lprintln!("Internal error determining if nick has collisions: {:?}", e);
                             self.state = State::NewConnection(Some(data));
                             return false;
                         }
@@ -281,10 +281,10 @@ impl<'a> UserWorker<'a> {
                         channel.who().unwrap();
                     },
                     Communicable::Channel(None) => {
-                        println!("Cannot get WHO for a channel we're not in");
+                        lprintln!("Cannot get WHO for a channel we're not in");
                     },
                     Communicable::User(_) => {
-                        println!("TODO: WHO command for users");
+                        lprintln!("TODO: WHO command for users");
                     }
                 }
             },
@@ -309,17 +309,17 @@ impl<'a> UserWorker<'a> {
             (State::Connected{data}, "JOIN") => {
                 let name = cmd.params[0].clone();
                 if self.is_in_channel(&name) {
-                    println!("Already in channel, doing nothing");
+                    lprintln!("Already in channel, doing nothing");
                     return false;
                 }
                 match self.directory.get_channel_by_name(name.clone(), data.nick.clone()) {
                     Ok(channel) => {
-                        println!("Got channel: {:?}", channel);
+                        lprintln!("Got channel: {:?}", channel);
                         match self.directory.get_user_by_nick(data.nick.clone()) {
                             Ok(user) => {
                                 match channel.join(user) {
                                     Ok(entry) => {
-                                        println!("Got entry: {:?}", entry);
+                                        lprintln!("Got entry: {:?}", entry);
                                         entry.update_mask(data.nick.clone());
                                         self.channels.push(StoredChannel{
                                             name: name.clone(),
@@ -327,17 +327,17 @@ impl<'a> UserWorker<'a> {
                                         });
                                     },
                                     Err(e) => {
-                                        println!("Error during join process: {:?}", e);
+                                        lprintln!("Error during join process: {:?}", e);
                                     }
                                 }
                             }
                             Err(e) => {
-                                println!("Error getting self to join channel: {:?}", e);
+                                lprintln!("Error getting self to join channel: {:?}", e);
                             }
                         }
                     }
                     Err(e) => {
-                        println!("Error joining channel: {:?}", e);
+                        lprintln!("Error joining channel: {:?}", e);
                     }
                 };
             },
@@ -350,12 +350,12 @@ impl<'a> UserWorker<'a> {
                         (cmd.params[0].clone(), Some(cmd.trailing.join(" ")))
                     }
                 };
-                println!("Looking for channel: {:?}", name);
+                lprintln!("Looking for channel: {:?}", name);
                 if !self.is_in_channel(&name) {
-                    println!("Not in channel, doing nothing");
+                    lprintln!("Not in channel, doing nothing");
                     return false;
                 }
-                println!("Draining");
+                lprintln!("Draining");
                 let drained = self.channels.drain(..).filter(|c| {
                     if c.name == *name {
                         c.thread.part_reason(reason.clone());
@@ -364,7 +364,7 @@ impl<'a> UserWorker<'a> {
                         true
                     }
                 }).collect();
-                println!("drained: {:?}", drained);
+                lprintln!("drained: {:?}", drained);
                 self.channels = drained;
 
             },
@@ -372,7 +372,7 @@ impl<'a> UserWorker<'a> {
                 return true;
             },
             (_,_) => {
-                println!("I don't know how to handle CMD: {:?} at with STATE: {:?}", cmd, self.state);
+                lprintln!("I don't know how to handle CMD: {:?} at with STATE: {:?}", cmd, self.state);
                 //return true;
             }
         };

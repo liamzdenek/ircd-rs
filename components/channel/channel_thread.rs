@@ -45,7 +45,7 @@ impl ChannelWorker {
                             }
                         }
                         Err(e) => {
-                            println!("DirectoryThread Got error: {:?}", e);
+                            lprintln!("DirectoryThread Got error: {:?}", e);
                         }
                     }
                 },
@@ -56,7 +56,7 @@ impl ChannelWorker {
     fn handle_msg(&mut self, msg: ChannelThreadMsg) -> bool {
         match msg {
             ChannelThreadMsg::Join(s, user) => {
-                println!("Got join: {:?}", user);
+                lprintln!("Got join: {:?}", user);
                 let mut i = 0;
                 for (j,v) in self.users.iter().enumerate() {
                     if v.is_none() {
@@ -75,7 +75,7 @@ impl ChannelWorker {
                 self.users[i] = Some(user);
             },
             ChannelThreadMsg::Part(id, mask, reason) => {
-                println!("Got part: {:?}", id);
+                lprintln!("Got part: {:?}", id);
                 let reason = reason.unwrap_or("No reason provided".into());
                 let found = match self.users.get(id) {
                     Some(&Some(ref user)) => {
@@ -111,7 +111,7 @@ impl ChannelWorker {
                 }
             },
             ChannelThreadMsg::Privmsg(id, mask, msg) => {
-                println!("[{chan}] <{mask}> {msg}", chan=self.name, mask=mask, msg=msg);
+                lprintln!("[{chan}] <{mask}> {msg}", chan=self.name, mask=mask, msg=msg);
                 for (tid, user) in self.users.iter().enumerate() {
                     if id == tid {
                         continue;

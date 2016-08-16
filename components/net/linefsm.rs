@@ -23,7 +23,7 @@ impl LineFSM {
             match state {
                 State::Ready{mut line} => {
                     let line = line.trim_right();
-                    println!("<< {}", line);
+                    lprintln!("<< {}", line);
 
                     if line.chars().next() == Some(':') {
                         state = State::ParsePrefix{line: line.into()};

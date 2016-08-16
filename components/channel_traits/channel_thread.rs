@@ -73,7 +73,7 @@ struct StoredChannelId {
 
 impl Drop for StoredChannelId {
     fn drop(&mut self) {
-        println!("Dropping Channel ID -- {:?} -- {:?}", self.id, self.part_reason);
+        lprintln!("Dropping Channel ID -- {:?} -- {:?}", self.id, self.part_reason);
         self.channel.part(self.id, self.mask.clone(), self.part_reason.take()).unwrap();
     }
 }
