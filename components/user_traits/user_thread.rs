@@ -9,15 +9,21 @@ pub struct Mask {
     pub user: String,
     pub host: String,
     pub real: String,
+    pub hops: u32,
+    pub timestamp: String,
+    pub servername: String,
 }
 
 impl Mask {
-    pub fn new(nick: String, user: String, host: String, real: String) -> Self {
+    pub fn new(nick: String, user: String, host: String, real: String, hops: u32, timestamp: String, servername: String) -> Self {
         Mask{
             nick: nick,
             user: user,
             host: host,
             real: real,
+            hops: hops,
+            timestamp: timestamp,
+            servername: servername,
         }
     }
     pub fn full(&self) -> String {

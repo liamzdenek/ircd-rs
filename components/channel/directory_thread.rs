@@ -74,7 +74,11 @@ impl DirectoryWorker {
         lprintln!("Directory Thread got msg: {:?}", msg);
         match msg {
             DirectoryThreadMsg::GetChannels(s) => {
-
+                s.send(
+                    self.channels_by_name.values().map(|stored_chan| {
+                        stored_chan.thread.clone()
+                    }).collect()
+                );
             },
             DirectoryThreadMsg::GetChannelByName(s, name, nick) => {
                 let has_new = match self.channels_by_name.get(&name) {
@@ -91,6 +95,14 @@ impl DirectoryWorker {
                 if let Some(channel) = has_new {
                     self.channels_by_name.insert(name, DChannelEntry{ thread: channel.clone() });
                 }
+            },
+            DirectoryThreadMsg::GetUsers(s) => {
+                s.send(self.users.clone().into_iter().filter_map(|user|
+                    match user {
+                        Some(user) => Some(user.borrow().thread.clone()),
+                        None => None,
+                    }
+                ).collect());
             },
             DirectoryThreadMsg::GetUserByNick(s, nick) => {
                 s.send(

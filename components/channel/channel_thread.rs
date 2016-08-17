@@ -124,6 +124,12 @@ impl ChannelWorker {
                     }
                 }
             },
+            ChannelThreadMsg::GetUsers(s) => {
+                s.send(self.users.clone().into_iter().filter_map(|user| user).collect());
+            },
+            ChannelThreadMsg::GetName(s) => {
+                s.send(self.name.clone());
+            },
             ChannelThreadMsg::Exit => {
                 return true;
             }

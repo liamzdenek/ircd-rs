@@ -62,6 +62,8 @@ pub enum SRPL {
     Pass(String), // password
     Server(String, u32, String), // name, hops, desc
     ProtoCtl(Vec<ProtoOption>),
+    Nick(String, u32, String, String, String, String, String, String, String, String), // Nick, Hops, Timestamp, Username, Hostname, Servername, Servicestamp, Modes, CloakedHost, Realname)
+    Sjoin(String, String, Vec<String>), // Timestamp, Channel, Vec<Nick with modes>
     EOS,
 }
 
@@ -105,6 +107,7 @@ impl ProtoOption {
 
 impl SRPL {
     pub fn raw(&self, data: &mut WriterData) -> String {
+        let servername = &data.server_name;
         match self {
             &SRPL::Pass(ref pass) => format!("PASS :{pass}",
                 pass=pass
@@ -122,6 +125,27 @@ impl SRPL {
                 format!("PROTOCTL {opts}", opts = str)
             },
             &SRPL::EOS => "EOS".into(),
+            &SRPL::Nick(ref nick, ref hops, ref timestamp, ref username, ref hostname, ref servername, ref servicesstamp, ref modes, ref cloakedhost, ref realname) => {
+                let hops = hops+1;
+                format!("NICK {nick} {hops} {timestamp} {username} {hostname} {servername} {servicesstamp} {modes} {cloakedhost} :{realname}",
+                    nick=nick,
+                    hops=hops,
+                    timestamp=timestamp,
+                    username=username,
+                    hostname=hostname,
+                    servername=servername,
+                    servicesstamp=servicesstamp,
+                    modes=modes,
+                    cloakedhost=cloakedhost,
+                    realname=realname,
+                )
+            }
+            &SRPL::Sjoin(ref timestamp, ref channel, ref users) => format!(":{sname} SJOIN {timestamp} {channel} :{users}",
+                sname=servername,
+                timestamp=timestamp,
+                channel=channel,
+                users=users.join(" "),
+            ),
         }
     }
 }

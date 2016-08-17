@@ -16,6 +16,8 @@ pub enum ChannelThreadMsg {
     Part(ChannelId, String, Option<String>),
     Privmsg(ChannelId, String, String),
     Who(ChannelId),
+    GetUsers(Sender<Vec<User>>),
+    GetName(Sender<String>),
     Exit,
 }
 
@@ -96,5 +98,13 @@ impl Channel {
     fn part(&self, id: ChannelId, mask: String, reason: Option<String>) -> Result<()> {
         try!(send!(self.thread, ChannelThreadMsg::Part => (id, mask, reason)));
         Ok(())
+    }
+
+    pub fn get_name(&self) -> Result<String> {
+        Ok(try!(req_rep!(self.thread, ChannelThreadMsg::GetName => ())))
+    }
+
+    pub fn get_users(&self) -> Result<Vec<User>> {
+        Ok(try!(req_rep!(self.thread, ChannelThreadMsg::GetUsers => ())))
     }
 }

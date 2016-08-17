@@ -45,6 +45,7 @@ enum State {
 #[derive(Debug, Default, Clone)]
 struct UserData {
     nick: String,
+    timestamp: String,
     user_name: String,
     real_name: String,
 }
@@ -63,14 +64,17 @@ impl UserData {
             self.user_name = cmd.params[0].clone();
             self.real_name = cmd.trailing.clone().join(" ");
         }
+        if self.is_ready() {
+            self.timestamp = "123456".into(); // TODO: time.now()
+        }
     }
 
     fn is_ready(&mut self) -> bool {
         return self.nick.len() > 0 && self.user_name.len() > 0 && self.real_name.len() > 0
     }
 
-    fn gen_mask(&self) -> Mask {
-        Mask::new(self.nick.clone(), self.user_name.clone(), "TODO".into(), self.real_name.clone())
+    fn gen_mask(&self, config: &Config) -> Mask {
+        Mask::new(self.nick.clone(), self.user_name.clone(), "TODO".into(), self.real_name.clone(), 0, self.timestamp.clone(), config.get_server_name())
     }
 }
 
@@ -160,7 +164,7 @@ impl<'a> UserWorker<'a> {
             UserThreadMsg::JoinSelf(chan_name) => {
                 match &self.state {
                     &State::Connected{ref data} => {
-                        self.writer.write(RPL::Join(data.gen_mask().for_privmsg(), chan_name));
+                        self.writer.write(RPL::Join(data.gen_mask(&self.config).for_privmsg(), chan_name));
                     }
                     st => {
                         lprintln!("Cannot JOIN with state: {:?}", st);
@@ -175,7 +179,7 @@ impl<'a> UserWorker<'a> {
             UserThreadMsg::PartSelf(chan_name, reason) => {
                 let should_remove = match &self.state {
                     &State::Connected{ref data} => {
-                        self.writer.write(RPL::Part(data.gen_mask().for_privmsg(), chan_name.clone(), reason));
+                        self.writer.write(RPL::Part(data.gen_mask(&self.config).for_privmsg(), chan_name.clone(), reason));
                         true
                     }
                     st => {
@@ -202,7 +206,7 @@ impl<'a> UserWorker<'a> {
             UserThreadMsg::GetMask(s) => {
                 s.send(match &self.state {
                     &State::Connected{ref data} => {
-                        Ok(data.gen_mask())
+                        Ok(data.gen_mask(&self.config))
                     },
                     _ => Err(Error::InvalidState),
                 });
@@ -292,14 +296,14 @@ impl<'a> UserWorker<'a> {
                 let msg_string = cmd.params.split_at(1).1.join(" ") + cmd.trailing.join(" ").as_ref();
                 match self.get_communicable(&cmd.params[0]) {
                     Communicable::Channel(Some(channel)) => {
-                        channel.privmsg(data.gen_mask().for_privmsg(), msg_string);
+                        channel.privmsg(data.gen_mask(&self.config).for_privmsg(), msg_string);
                     },
                     Communicable::Channel(None) => {
                         // find out what's supposed to happen when PRIVMSG a channel the user isn't in
                         unimplemented!{};
                     },
                     Communicable::User(Some(user)) => {
-                        user.privmsg(data.gen_mask().for_privmsg(), msg_string);
+                        user.privmsg(data.gen_mask(&self.config).for_privmsg(), msg_string);
                     },
                     Communicable::User(None) => {
                         self.writer.write(RPL::NickNotFound(cmd.params[0].clone()));

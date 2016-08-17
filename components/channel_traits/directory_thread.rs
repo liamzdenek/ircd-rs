@@ -12,6 +12,7 @@ pub type DirectoryId = u64;
 pub enum DirectoryThreadMsg {
     GetChannels(Sender<Vec<Channel>>),
     GetChannelByName(Sender<Channel>, String, String),
+    GetUsers(Sender<Vec<User>>),
     GetUserByNick(Sender<Result<User>>, String),
     // INVARIANT: The Sender of this NewUser msg MUST place this Id into a new DirectoryEntry to ensure proper cleanup BEFORE any cloning to prevent double-free
     // it is impossible to handle this within the DirectoryThread itself because it would create a circular reference. even though it would work fine, it would  prevent the DirectoryThread from automatically cleaning up
@@ -84,8 +85,16 @@ impl Directory {
         Ok(())
     }
 
+    pub fn get_users(&self) -> Result<Vec<User>> {
+        Ok(try!(req_rep!(self.thread, DirectoryThreadMsg::GetUsers => ())))
+    }
+
     pub fn get_user_by_nick(&self, nick: String) -> Result<User> {
         try!(req_rep!(self.thread, DirectoryThreadMsg::GetUserByNick => (nick)))
+    }
+
+    pub fn get_channels(&self) -> Result<Vec<Channel>> {
+        Ok(try!(req_rep!(self.thread, DirectoryThreadMsg::GetChannels => ())))
     }
 
     pub fn get_channel_by_name(&self, name: String, nick: String) -> Result<Channel> {
