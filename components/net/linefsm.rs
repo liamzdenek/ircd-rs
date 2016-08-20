@@ -34,8 +34,9 @@ impl LineFSM {
                 },
                 State::ParsePrefix{line} => {
                     let mut words = line.split(" ");
-                    
-                    prefix = Some(words.next().unwrap().into());
+                    let mut tprefix = words.next().unwrap().split(":");
+                    tprefix.next();
+                    prefix = Some(tprefix.collect::<Vec<_>>().join(":"));
                     let words: Vec<_> = words.collect();
                     
                     state = State::ParseCommand{line: words.join(" "),}
@@ -75,7 +76,7 @@ impl LineFSM {
                 },
                 State::Complete => {
                     return Ok(ParsedCommand{
-                        //prefix: prefix,
+                        prefix: prefix.unwrap_or(String::new()),
                         command: command,
                         params: params,
                         trailing: trailing,

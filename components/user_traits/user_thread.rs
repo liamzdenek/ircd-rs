@@ -3,7 +3,7 @@ use super::Result;
 
 pub type UserThread = Sender<UserThreadMsg>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Mask {
     pub nick: String,
     pub user: String,

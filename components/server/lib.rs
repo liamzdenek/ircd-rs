@@ -15,8 +15,8 @@ extern crate serde_yaml;
 
 pub mod server_thread;
 pub mod config_thread;
-pub mod virtual_user;
+pub mod virtual_user_thread;
 
 pub use server_thread::*;
 pub use config_thread::*;
-pub use virtual_user::*;
+pub use virtual_user_thread::*;

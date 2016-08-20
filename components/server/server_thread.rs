@@ -2,11 +2,11 @@ use std::sync::mpsc::{channel, Receiver, Select};
 use std::net::TcpStream;
 use std::thread;
 
-use user_traits::{Mask};
+use user_traits::{User, Mask, UserThread};
 use channel_traits::{Directory};
 use net_traits::{Writer,ParsedCommand,ReaderThreadMsg,SRPL};
 use server_traits::Config;
-use super::VirtualUser;
+use super::{VirtualUserThreadFactory, VirtualUserChannels};
 
 #[derive(Debug, Clone)]
 enum State {
@@ -20,7 +20,7 @@ pub struct ServerWorker {
     directory: Directory,
     config: Config,
     state: State,
-    users: Vec<VirtualUser>,
+    users: Vec<VirtualUserChannels>,
 }
 impl ServerWorker {
     pub fn new(rx: Receiver<ReaderThreadMsg>, writer: Writer, directory: Directory, config: Config) -> Self {
@@ -46,45 +46,9 @@ impl ServerWorker {
         };
 
         loop {
-            // this block is unsafe because handles may not be moved after .add has been called
-            let state: SelectState = unsafe {
-                
-                let sel = Select::new();
-                
-                // self.rx
-                let mut self_rx = sel.handle(&self.rx);
-                self_rx.add();
-    
-                // users
-                let mut self_users: Vec<_> = self.users.iter().map(|user| {
-                    sel.handle(user.poll())
-                }).collect();
-
-                for mut user in self_users.iter_mut() {
-                    user.add();
-                }
-
-                lprintln!("=========================");
-                lprintln!("= = WAITING = =");
-                lprintln!("=========================");
-                let id = sel.wait();
-                lprintln!("=========================");
-                lprintln!("= = DONE WAITING = =");
-                lprintln!("=========================");
-                if id == self_rx.id() { SelectState::SelfRx }
-                else {
-                    let user = self_users.iter().enumerate().find(|&(ref i, ref user)| id == user.id());
-                    if user.is_some() {
-                        SelectState::SelfUser(user.unwrap().0)
-                    } else {
-                        unreachable!{}
-                    }
-                }
-            };
-
-            match state {
-                SelectState::SelfRx => {
-                    match self.rx.recv() {
+            lselect!(
+                msg = self.rx => {
+                    match msg {
                         Ok(msg) => {
                             if self.handle_msg(msg) {
                                 return;
@@ -96,19 +60,7 @@ impl ServerWorker {
                         }
                     };
                 },
-                SelectState::SelfUser(i) => {
-                    unimplemented!{};
-                    match self.users[i].poll().recv() {
-                        Ok(msg) => {
-                            println!("GOT MSG FOR USER: {:?}", msg);
-                            unimplemented!{};
-                        },
-                        Err(e) => {
-                            unimplemented!{};
-                        },
-                    }
-                }
-            }
+            );
         };
     }
 
@@ -207,7 +159,7 @@ impl ServerWorker {
                     cmd.params[2].clone(), // timestamp
                     cmd.params[5].clone(), // servername
                 );
-                let vu = VirtualUser::new(self.directory.clone(), self.config.clone(), mask);
+                let vu = <UserThread as VirtualUserThreadFactory>::new(self.directory.clone(), self.config.clone(), mask);
                 self.users.push(vu);
             },
             (_, "SJOIN") => {
@@ -217,11 +169,20 @@ impl ServerWorker {
                 for nick in nicks.into_iter() {
                     let (nick, modes) = parse_nick(nick);
                     
-                    let maybe_user = self.users.iter_mut().find(|user| user.get_mask().nick == nick);
+                    let maybe_user = self.users.iter().find(|user| user.user_thread.get_mask().unwrap().nick == nick);
                     
                     if let Some(user) = maybe_user {
-                        user.join(channel.clone());
+                        user.vuser_thread.join(channel.clone());
                     }
+                }
+            },
+            (_, "PART") => {
+                let nick = cmd.prefix;
+                let channel = cmd.params[0].clone();
+                let maybe_user = self.users.iter().find(|user| user.user_thread.get_mask().unwrap().nick == nick);
+
+                if let Some(user) = maybe_user {
+                    user.vuser_thread.part(channel);
                 }
             },
             _ => {
