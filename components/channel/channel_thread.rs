@@ -56,7 +56,6 @@ impl ChannelWorker {
     fn handle_msg(&mut self, msg: ChannelThreadMsg) -> bool {
         match msg {
             ChannelThreadMsg::Join(s, user) => {
-                lprintln!("Got join: {:?}", user);
                 let mut i = 0;
                 for (j,v) in self.users.iter().enumerate() {
                     if v.is_none() {
@@ -70,12 +69,23 @@ impl ChannelWorker {
                     self.users.push(None);
                 }
                 s.send(i); // must come before introduce/welcome otherwise may cause deadlock
+                /*
+                lprintln!("=B=======================");
+                lprintln!("GOT JOIN FROM: {:?}", user.get_mask());
+                lprintln!("GOT JOIN TO: {:?}", self.name);
+                lprintln!("=========================");
+                */
                 self.introduce(&user);
                 self.welcome(&user);
                 self.users[i] = Some(user);
             },
             ChannelThreadMsg::Part(id, mask, reason) => {
-                lprintln!("Got part: {:?}", id);
+                /*
+                lprintln!("=A=======================");
+                lprintln!("GOT PART FROM: {:?}", self.users.get(id).clone().to_owned().unwrap().clone().unwrap().get_mask());
+                lprintln!("GOT PART TO: {:?}", self.name);
+                lprintln!("=========================");
+                */
                 let reason = reason.unwrap_or("No reason provided".into());
                 let found = match self.users.get(id) {
                     Some(&Some(ref user)) => {

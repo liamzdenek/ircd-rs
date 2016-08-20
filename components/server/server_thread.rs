@@ -1,10 +1,12 @@
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::{channel, Receiver, Select};
 use std::net::TcpStream;
 use std::thread;
 
+use user_traits::{Mask};
 use channel_traits::{Directory};
 use net_traits::{Writer,ParsedCommand,ReaderThreadMsg,SRPL};
 use server_traits::Config;
+use super::VirtualUser;
 
 #[derive(Debug, Clone)]
 enum State {
@@ -18,6 +20,7 @@ pub struct ServerWorker {
     directory: Directory,
     config: Config,
     state: State,
+    users: Vec<VirtualUser>,
 }
 impl ServerWorker {
     pub fn new(rx: Receiver<ReaderThreadMsg>, writer: Writer, directory: Directory, config: Config) -> Self {
@@ -27,6 +30,7 @@ impl ServerWorker {
             directory: directory,
             config: config,
             state: State::Sync,
+            users: vec![],
         }
     }
 
@@ -36,14 +40,51 @@ impl ServerWorker {
         self.introduce();
         self.sync();
 
+        enum SelectState {
+            SelfUser(usize),
+            SelfRx,
+        };
+
         loop {
-            lselect_timeout!{
-                6 * 60 * 1000 => {
-                    lprintln!("Connection timed out");
-                    return;
-                },
-                msg = self.rx => {
-                    match msg {
+            // this block is unsafe because handles may not be moved after .add has been called
+            let state: SelectState = unsafe {
+                
+                let sel = Select::new();
+                
+                // self.rx
+                let mut self_rx = sel.handle(&self.rx);
+                self_rx.add();
+    
+                // users
+                let mut self_users: Vec<_> = self.users.iter().map(|user| {
+                    sel.handle(user.poll())
+                }).collect();
+
+                for mut user in self_users.iter_mut() {
+                    user.add();
+                }
+
+                lprintln!("=========================");
+                lprintln!("= = WAITING = =");
+                lprintln!("=========================");
+                let id = sel.wait();
+                lprintln!("=========================");
+                lprintln!("= = DONE WAITING = =");
+                lprintln!("=========================");
+                if id == self_rx.id() { SelectState::SelfRx }
+                else {
+                    let user = self_users.iter().enumerate().find(|&(ref i, ref user)| id == user.id());
+                    if user.is_some() {
+                        SelectState::SelfUser(user.unwrap().0)
+                    } else {
+                        unreachable!{}
+                    }
+                }
+            };
+
+            match state {
+                SelectState::SelfRx => {
+                    match self.rx.recv() {
                         Ok(msg) => {
                             if self.handle_msg(msg) {
                                 return;
@@ -53,8 +94,20 @@ impl ServerWorker {
                             lprintln!("ServerWorker Got error: {:?}", e);
                             return;
                         }
-                    }
+                    };
                 },
+                SelectState::SelfUser(i) => {
+                    unimplemented!{};
+                    match self.users[i].poll().recv() {
+                        Ok(msg) => {
+                            println!("GOT MSG FOR USER: {:?}", msg);
+                            unimplemented!{};
+                        },
+                        Err(e) => {
+                            unimplemented!{};
+                        },
+                    }
+                }
             }
         };
     }
@@ -140,11 +193,36 @@ impl ServerWorker {
             (_, "PING") => {
                 self.writer.swrite(SRPL::Pong(cmd.params.clone().join(" ") + cmd.trailing.clone().join(" ").as_str()));
             },
-            (Sync, "EOS") => {
+            (State::Sync, "EOS") => {
                 self.state = State::Connected;
             },
-            (Sync, "NICK") => {
-                
+            (_, "NICK") => {
+                lprintln!("GOT VIRTUAL USER");
+                let mask = Mask::new(
+                    cmd.params[0].clone(), // Nick
+                    cmd.params[3].clone(), // User
+                    cmd.params[4].clone(), // host
+                    cmd.trailing.join(".clone() "), // real
+                    cmd.params[1].parse().unwrap(), // hops
+                    cmd.params[2].clone(), // timestamp
+                    cmd.params[5].clone(), // servername
+                );
+                let vu = VirtualUser::new(self.directory.clone(), self.config.clone(), mask);
+                self.users.push(vu);
+            },
+            (_, "SJOIN") => {
+                let timestamp = cmd.params[0].clone();
+                let channel = cmd.params[1].clone();
+                let nicks = cmd.trailing.clone();
+                for nick in nicks.into_iter() {
+                    let (nick, modes) = parse_nick(nick);
+                    
+                    let maybe_user = self.users.iter_mut().find(|user| user.get_mask().nick == nick);
+                    
+                    if let Some(user) = maybe_user {
+                        user.join(channel.clone());
+                    }
+                }
             },
             _ => {
                 lprintln!("I don't know how to handle cmd: {:?}", cmd);
@@ -152,4 +230,22 @@ impl ServerWorker {
         }
         return false;
     }
+}
+
+fn parse_nick(nick: String) -> (String, Vec<char>) {
+    let mut chars = nick.chars();
+    let mut is_flags = true;
+    let mut outnick = String::new();
+    let mut modes = vec![];
+    while let Some(next) = chars.next() {
+        match (is_flags, next) {
+            (true, '@') => {
+                modes.push('o');
+            },
+            (_, c) => {
+                outnick.push(c);
+            },
+        }
+    };
+    (outnick, modes)
 }

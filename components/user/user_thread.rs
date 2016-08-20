@@ -21,8 +21,10 @@ impl UserThreadFactory for UserThread {
         thread::Builder::new().name("UserThread".to_string()).spawn(move || {
             let do_upgrade = UserWorker::new(urx, &rrx, w.clone(), directory.clone(), entry, config.clone()).run();
             if do_upgrade {
-                // allow directory entry and user receiver (var entry, var urx) to out of scope
-                ServerWorker::new(rrx, w, directory, config).run();
+                thread::Builder::new().name("ServerThread".to_string()).spawn(move || {
+                    // allow directory entry and user receiver (var entry, var urx) to out of scope
+                    ServerWorker::new(rrx, w, directory, config).run();
+                });
             }
         });
 
@@ -68,7 +70,6 @@ impl UserData {
             self.timestamp = "123456".into(); // TODO: time.now()
         }
     }
-
     fn is_ready(&mut self) -> bool {
         return self.nick.len() > 0 && self.user_name.len() > 0 && self.real_name.len() > 0
     }
@@ -323,7 +324,6 @@ impl<'a> UserWorker<'a> {
                             Ok(user) => {
                                 match channel.join(user) {
                                     Ok(entry) => {
-                                        lprintln!("Got entry: {:?}", entry);
                                         entry.update_mask(data.nick.clone());
                                         self.channels.push(StoredChannel{
                                             name: name.clone(),
