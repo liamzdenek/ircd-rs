@@ -99,17 +99,17 @@ impl VirtualUserWorker {
             UserThreadMsg::GetMask(s) => {
                 s.send(Ok(self.mask.clone()));
             },
-            UserThreadMsg::Privmsg(nick, msg) => {
-                unimplemented!{};
-            },
-            UserThreadMsg::PrivmsgChan(nick, chan, msg) => {
-                unimplemented!{};
-            },
             UserThreadMsg::Exit => {
                 return true
             },
             UserThreadMsg::JoinSelf(chan) => {
                 // nothing to do, this is when the channel thread announces that you have joined, but sending this event is the remote server's job
+            },
+            UserThreadMsg::Privmsg(nick, msg) => {
+                // nothing to do, ^^^
+            },
+            UserThreadMsg::PrivmsgChan(nick, chan, msg) => {
+                // nothing to do, ^^^
             },
             UserThreadMsg::JoinOther(chan, nick) => {
                 // nothing to do ^^^
@@ -135,6 +135,14 @@ impl VirtualUserWorker {
             },
             VirtualUserThreadMsg::Part(chan) => {
                 self.part(chan);
+            },
+            VirtualUserThreadMsg::PrivmsgChan(chan, msg) => {
+                let maybe_chan = self.channels.iter().find(|&schan| schan.name == chan);
+
+                if let Some(chan) = maybe_chan {
+                    chan.thread.privmsg(self.mask.nick.clone(), msg);
+                }
+
             },
             VirtualUserThreadMsg::Exit => {
                 return true;

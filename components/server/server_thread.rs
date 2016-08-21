@@ -178,12 +178,24 @@ impl ServerWorker {
             },
             (_, "PART") => {
                 let nick = cmd.prefix;
-                let channel = cmd.params[0].clone();
+                let chan = cmd.params[0].clone();
                 let maybe_user = self.users.iter().find(|user| user.user_thread.get_mask().unwrap().nick == nick);
 
                 if let Some(user) = maybe_user {
-                    user.vuser_thread.part(channel);
+                    user.vuser_thread.part(chan);
                 }
+            },
+            (_, "PRIVMSG") => {
+                let nick = cmd.prefix;
+                let chan = cmd.params[0].clone();
+                let msg = cmd.trailing.join(" ");
+
+                let maybe_user = self.users.iter().find(|user| user.user_thread.get_mask().unwrap().nick == nick);
+
+                if let Some(user) = maybe_user {
+                    user.vuser_thread.privmsg_chan(chan, msg);
+                }
+
             },
             _ => {
                 lprintln!("I don't know how to handle cmd: {:?}", cmd);
